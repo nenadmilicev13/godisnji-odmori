@@ -1,0 +1,118 @@
+import { StatusZahteva, Zaposleni, ZahtevZaOdsustvo } from "./types";
+
+/** Generiše jednostavan jedinstveni ID bez eksternih zavisnosti. */
+export function generisiId(): string {
+  return (
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 9)
+  );
+}
+
+/** Broj radnih dana (pon–pet) između dva datuma, uključujući oba kraja. */
+export function brojRadnihDana(datumOd: string, datumDo: string): number {
+  const od = new Date(datumOd);
+  const doDatuma = new Date(datumDo);
+  if (isNaN(od.getTime()) || isNaN(doDatuma.getTime()) || od > doDatuma) {
+    return 0;
+  }
+  let broj = 0;
+  const tekuci = new Date(od);
+  while (tekuci <= doDatuma) {
+    const dan = tekuci.getDay(); // 0 = nedelja, 6 = subota
+    if (dan !== 0 && dan !== 6) broj++;
+    tekuci.setDate(tekuci.getDate() + 1);
+  }
+  return broj;
+}
+
+/** Formatira ISO datum u domaći format dd.mm.yyyy. */
+export function formatDatum(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("sr-RS", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/** Zbir iskorišćenih dana godišnjeg odmora za zaposlenog (samo odobreni zahtevi). */
+export function iskorisceniGodisnji(
+  zahtevi: ZahtevZaOdsustvo[],
+  zaposleniId: string,
+): number {
+  return zahtevi
+    .filter(
+      (z) =>
+        z.zaposleniId === zaposleniId &&
+        z.tip === "godisnji" &&
+        z.status === "odobreno",
+    )
+    .reduce((zbir, z) => zbir + brojRadnihDana(z.datumOd, z.datumDo), 0);
+}
+
+export function danas(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Da li se dva datumska intervala preklapaju (uključujući dodir krajeva). */
+export function intervaliSePreklapaju(
+  od1: string,
+  do1: string,
+  od2: string,
+  do2: string,
+): boolean {
+  return od1 <= do2 && od2 <= do1;
+}
+
+export interface KonfliktDizajnera {
+  zaposleni: Zaposleni;
+  zahtev: ZahtevZaOdsustvo;
+}
+
+/**
+ * Proverava da li bi odsustvo jednog dizajnera u datom periodu palo u isto
+ * vreme kad i odsustvo nekog drugog dizajnera. Dva dizajnera ne smeju biti
+ * odsutna istovremeno.
+ *
+ * Vraća prvi pronađeni konflikt ili `null` ako ga nema. Kandidat koji nije
+ * dizajner nikada ne pravi konflikt.
+ *
+ * @param relevantniStatusi statusi tuđih zahteva koji se računaju kao zauzeti
+ *        period (npr. `["na_cekanju", "odobreno"]` pri kreiranju, ili samo
+ *        `["odobreno"]` pri odobravanju).
+ */
+export function pronadjiKonfliktDizajnera(
+  zahtevi: ZahtevZaOdsustvo[],
+  zaposleni: Zaposleni[],
+  kandidat: {
+    zaposleniId: string;
+    datumOd: string;
+    datumDo: string;
+    ignorirajZahtevId?: string;
+  },
+  relevantniStatusi: StatusZahteva[] = ["na_cekanju", "odobreno"],
+): KonfliktDizajnera | null {
+  const podnosilac = zaposleni.find((z) => z.id === kandidat.zaposleniId);
+  if (!podnosilac || podnosilac.uloga !== "dizajner") return null;
+
+  for (const z of zahtevi) {
+    if (z.id === kandidat.ignorirajZahtevId) continue;
+    if (z.zaposleniId === kandidat.zaposleniId) continue;
+    if (!relevantniStatusi.includes(z.status)) continue;
+
+    const drugi = zaposleni.find((zap) => zap.id === z.zaposleniId);
+    if (!drugi || drugi.uloga !== "dizajner") continue;
+
+    if (
+      intervaliSePreklapaju(
+        kandidat.datumOd,
+        kandidat.datumDo,
+        z.datumOd,
+        z.datumDo,
+      )
+    ) {
+      return { zaposleni: drugi, zahtev: z };
+    }
+  }
+  return null;
+}
