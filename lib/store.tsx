@@ -2,81 +2,189 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import { Zaposleni, ZahtevZaOdsustvo, StatusZahteva } from "./types";
-import {
-  ucitajZaposlene,
-  ucitajZahteve,
-  sacuvajZaposlene,
-  sacuvajZahteve,
-} from "./storage";
-import { generisiId } from "./utils";
 
 interface StoreContext {
   zaposleni: Zaposleni[];
   zahtevi: ZahtevZaOdsustvo[];
+  trenutniKorisnik: Zaposleni | null;
   ucitano: boolean;
-  dodajZahtev: (z: Omit<ZahtevZaOdsustvo, "id" | "kreirano" | "status">) => void;
-  promeniStatus: (id: string, status: StatusZahteva) => void;
-  obrisiZahtev: (id: string) => void;
-  dodajZaposlenog: (z: Omit<Zaposleni, "id">) => void;
-  obrisiZaposlenog: (id: string) => void;
+  prijava: (email: string, lozinka: string) => Promise<string | null>;
+  odjava: () => Promise<void>;
+  dodajZahtev: (
+    z: Omit<ZahtevZaOdsustvo, "id" | "kreirano" | "status">,
+  ) => Promise<string | null>;
+  promeniStatus: (id: string, status: StatusZahteva) => Promise<string | null>;
+  obrisiZahtev: (id: string) => Promise<string | null>;
+  dodajZaposlenog: (z: Omit<Zaposleni, "id">) => Promise<string | null>;
+  obrisiZaposlenog: (id: string) => Promise<string | null>;
 }
 
 const Ctx = createContext<StoreContext | null>(null);
 
+/** Pomoćnik: parsira JSON i vraća poruku greške iz odgovora (ili null). */
+async function greskaIz(res: Response): Promise<string | null> {
+  if (res.ok) return null;
+  try {
+    const data = await res.json();
+    return data?.greska ?? "Došlo je do greške.";
+  } catch {
+    return "Došlo je do greške.";
+  }
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [zaposleni, setZaposleni] = useState<Zaposleni[]>([]);
   const [zahtevi, setZahtevi] = useState<ZahtevZaOdsustvo[]>([]);
+  const [trenutniKorisnik, setKorisnik] = useState<Zaposleni | null>(null);
   const [ucitano, setUcitano] = useState(false);
 
-  // Inicijalno učitavanje iz localStorage
-  useEffect(() => {
-    setZaposleni(ucitajZaposlene());
-    setZahtevi(ucitajZahteve());
-    setUcitano(true);
+  const ucitajPodatke = useCallback(async () => {
+    const [rz, rzh] = await Promise.all([
+      fetch("/api/zaposleni"),
+      fetch("/api/zahtevi"),
+    ]);
+    if (rz.ok) setZaposleni((await rz.json()).zaposleni);
+    if (rzh.ok) setZahtevi((await rzh.json()).zahtevi);
   }, []);
 
-  // Perzistencija
+  // Inicijalno: ko je prijavljen + podaci.
   useEffect(() => {
-    if (ucitano) sacuvajZaposlene(zaposleni);
-  }, [zaposleni, ucitano]);
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        const korisnik = res.ok ? (await res.json()).korisnik : null;
+        setKorisnik(korisnik);
+        if (korisnik) await ucitajPodatke();
+      } finally {
+        setUcitano(true);
+      }
+    })();
+  }, [ucitajPodatke]);
 
-  useEffect(() => {
-    if (ucitano) sacuvajZahteve(zahtevi);
-  }, [zahtevi, ucitano]);
+  const prijava = useCallback(
+    async (email: string, lozinka: string) => {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, lozinka }),
+      });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      setKorisnik((await res.json()).korisnik);
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
+  const odjava = useCallback(async () => {
+    await fetch("/api/logout", { method: "POST" });
+    setKorisnik(null);
+    setZaposleni([]);
+    setZahtevi([]);
+  }, []);
+
+  const dodajZahtev = useCallback<StoreContext["dodajZahtev"]>(
+    async (z) => {
+      const res = await fetch("/api/zahtevi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(z),
+      });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
+  const promeniStatus = useCallback<StoreContext["promeniStatus"]>(
+    async (id, status) => {
+      const res = await fetch(`/api/zahtevi/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
+  const obrisiZahtev = useCallback<StoreContext["obrisiZahtev"]>(
+    async (id) => {
+      const res = await fetch(`/api/zahtevi/${id}`, { method: "DELETE" });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
+  const dodajZaposlenog = useCallback<StoreContext["dodajZaposlenog"]>(
+    async (z) => {
+      const res = await fetch("/api/zaposleni", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(z),
+      });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
+  const obrisiZaposlenog = useCallback<StoreContext["obrisiZaposlenog"]>(
+    async (id) => {
+      const res = await fetch(`/api/zaposleni/${id}`, { method: "DELETE" });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
 
   const api = useMemo<StoreContext>(
     () => ({
       zaposleni,
       zahtevi,
+      trenutniKorisnik,
       ucitano,
-      dodajZahtev: (z) =>
-        setZahtevi((prev) => [
-          {
-            ...z,
-            id: generisiId(),
-            status: "na_cekanju",
-            kreirano: new Date().toISOString(),
-          },
-          ...prev,
-        ]),
-      promeniStatus: (id, status) =>
-        setZahtevi((prev) =>
-          prev.map((z) => (z.id === id ? { ...z, status } : z)),
-        ),
-      obrisiZahtev: (id) =>
-        setZahtevi((prev) => prev.filter((z) => z.id !== id)),
-      dodajZaposlenog: (z) =>
-        setZaposleni((prev) => [...prev, { ...z, id: generisiId() }]),
-      obrisiZaposlenog: (id) =>
-        setZaposleni((prev) => prev.filter((z) => z.id !== id)),
+      prijava,
+      odjava,
+      dodajZahtev,
+      promeniStatus,
+      obrisiZahtev,
+      dodajZaposlenog,
+      obrisiZaposlenog,
     }),
-    [zaposleni, zahtevi, ucitano],
+    [
+      zaposleni,
+      zahtevi,
+      trenutniKorisnik,
+      ucitano,
+      prijava,
+      odjava,
+      dodajZahtev,
+      promeniStatus,
+      obrisiZahtev,
+      dodajZaposlenog,
+      obrisiZaposlenog,
+    ],
   );
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

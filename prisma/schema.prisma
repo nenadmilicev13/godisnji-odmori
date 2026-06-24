@@ -1,0 +1,37 @@
+// Prisma šema — Postgres baza za aplikaciju "Godišnji odmori".
+// Konekcioni string ide u .env kao DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Zaposleni {
+  id                String   @id @default(cuid())
+  ime               String
+  pozicija          String
+  email             String   @unique
+  uloga             String // dizajner | frontend | seo | sef | ostalo
+  lozinkaHash       String
+  brojDanaGodisnjeg Int      @default(20)
+  kreirano          DateTime @default(now())
+  zahtevi           Zahtev[]
+}
+
+model Zahtev {
+  id          String    @id @default(cuid())
+  zaposleni   Zaposleni @relation(fields: [zaposleniId], references: [id], onDelete: Cascade)
+  zaposleniId String
+  tip         String // godisnji | bolovanje | slobodan_dan | placeno_odsustvo | neplaceno_odsustvo
+  datumOd     String // yyyy-mm-dd
+  datumDo     String // yyyy-mm-dd
+  napomena    String    @default("")
+  status      String    @default("na_cekanju") // na_cekanju | odobreno | odbijeno
+  kreirano    DateTime  @default(now())
+
+  @@index([zaposleniId])
+}

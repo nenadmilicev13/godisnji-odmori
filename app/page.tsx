@@ -3,19 +3,35 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { brojRadnihDana } from "@/lib/utils";
+import { jeAdmin } from "@/lib/types";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/Modal";
 import ZahtevForma from "@/components/ZahtevForma";
 import ZahteviLista from "@/components/ZahteviLista";
 import ZaposleniLista from "@/components/ZaposleniLista";
 import Kalendar from "@/components/Kalendar";
+import LoginPage from "@/components/LoginPage";
 
 type Tab = "pregled" | "kalendar" | "zaposleni";
 
 export default function Home() {
-  const { zaposleni, zahtevi, ucitano } = useStore();
+  const { zaposleni, zahtevi, ucitano, trenutniKorisnik, odjava } = useStore();
   const [tab, setTab] = useState<Tab>("pregled");
   const [formaOtvorena, setFormaOtvorena] = useState(false);
+
+  // Dok se ne zna ko je prijavljen — kratko učitavanje.
+  if (!ucitano) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-400">
+        Učitavanje...
+      </div>
+    );
+  }
+
+  // Bez prijave — login ekran.
+  if (!trenutniKorisnik) return <LoginPage />;
+
+  const admin = jeAdmin(trenutniKorisnik);
 
   const naCekanju = zahtevi.filter((z) => z.status === "na_cekanju").length;
   const odobreno = zahtevi.filter((z) => z.status === "odobreno").length;
@@ -40,12 +56,29 @@ export default function Home() {
               <p className="text-xs text-slate-500">Upravljanje odsustvima zaposlenih</p>
             </div>
           </div>
-          <button className="btn-primary" onClick={() => setFormaOtvorena(true)}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            <span className="hidden sm:inline">Novi zahtev</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-medium text-slate-900">
+                {trenutniKorisnik.ime}
+              </p>
+              <p className="text-xs text-slate-500">
+                {admin ? "Admin (šef)" : trenutniKorisnik.pozicija}
+              </p>
+            </div>
+            <button className="btn-primary" onClick={() => setFormaOtvorena(true)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span className="hidden sm:inline">Novi zahtev</span>
+            </button>
+            <button
+              onClick={() => odjava()}
+              className="btn-ghost px-3 py-2 text-sm"
+              title="Odjavi se"
+            >
+              Odjava
+            </button>
+          </div>
         </div>
       </header>
 
@@ -114,21 +147,15 @@ export default function Home() {
           </button>
         </div>
 
-        {!ucitano ? (
-          <div className="card flex items-center justify-center py-16 text-sm text-slate-400">
-            Učitavanje...
-          </div>
-        ) : (
-          <div className="animate-fade-in">
-            {tab === "pregled" ? (
-              <ZahteviLista />
-            ) : tab === "kalendar" ? (
-              <Kalendar />
-            ) : (
-              <ZaposleniLista />
-            )}
-          </div>
-        )}
+        <div className="animate-fade-in">
+          {tab === "pregled" ? (
+            <ZahteviLista />
+          ) : tab === "kalendar" ? (
+            <Kalendar />
+          ) : (
+            <ZaposleniLista />
+          )}
+        </div>
       </main>
 
       <footer className="mx-auto max-w-6xl px-4 py-6 text-center text-xs text-slate-400 sm:px-6">

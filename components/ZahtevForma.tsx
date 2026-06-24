@@ -2,49 +2,41 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { TipOdsustva, TIP_LABELE } from "@/lib/types";
-import {
-  brojRadnihDana,
-  danas,
-  formatDatum,
-  pronadjiKonfliktDizajnera,
-} from "@/lib/utils";
+import { TipOdsustva, TIP_LABELE, jeAdmin } from "@/lib/types";
+import { brojRadnihDana, danas } from "@/lib/utils";
 
 interface Props {
   onGotovo: () => void;
 }
 
 export default function ZahtevForma({ onGotovo }: Props) {
-  const { zaposleni, zahtevi, dodajZahtev } = useStore();
-  const [zaposleniId, setZaposleniId] = useState(zaposleni[0]?.id ?? "");
+  const { zaposleni, trenutniKorisnik, dodajZahtev } = useStore();
+  const admin = jeAdmin(trenutniKorisnik);
+
+  // Ne-admin može da unese zahtev samo za sebe.
+  const [zaposleniId, setZaposleniId] = useState(
+    admin ? (zaposleni[0]?.id ?? "") : (trenutniKorisnik?.id ?? ""),
+  );
   const [tip, setTip] = useState<TipOdsustva>("godisnji");
   const [datumOd, setDatumOd] = useState(danas());
   const [datumDo, setDatumDo] = useState(danas());
   const [napomena, setNapomena] = useState("");
   const [greska, setGreska] = useState("");
+  const [salje, setSalje] = useState(false);
 
   const radniDani = brojRadnihDana(datumOd, datumDo);
 
-  function posalji(e: React.FormEvent) {
+  async function posalji(e: React.FormEvent) {
     e.preventDefault();
     if (!zaposleniId) return setGreska("Izaberite zaposlenog.");
     if (new Date(datumOd) > new Date(datumDo))
       return setGreska("Datum „od“ ne može biti posle datuma „do“.");
 
-    const konflikt = pronadjiKonfliktDizajnera(zahtevi, zaposleni, {
-      zaposleniId,
-      datumOd,
-      datumDo,
-    });
-    if (konflikt) {
-      return setGreska(
-        `Dva dizajnera ne mogu biti odsutna istovremeno. ${konflikt.zaposleni.ime} ` +
-          `već ima odsustvo u periodu ${formatDatum(konflikt.zahtev.datumOd)} – ` +
-          `${formatDatum(konflikt.zahtev.datumDo)}. Izaberite drugi termin.`,
-      );
-    }
-
-    dodajZahtev({ zaposleniId, tip, datumOd, datumDo, napomena });
+    setGreska("");
+    setSalje(true);
+    const g = await dodajZahtev({ zaposleniId, tip, datumOd, datumDo, napomena });
+    setSalje(false);
+    if (g) return setGreska(g);
     onGotovo();
   }
 
@@ -52,17 +44,25 @@ export default function ZahtevForma({ onGotovo }: Props) {
     <form onSubmit={posalji} className="space-y-4">
       <div>
         <label className="label">Zaposleni</label>
-        <select
-          className="input"
-          value={zaposleniId}
-          onChange={(e) => setZaposleniId(e.target.value)}
-        >
-          {zaposleni.map((z) => (
-            <option key={z.id} value={z.id}>
-              {z.ime} — {z.pozicija}
-            </option>
-          ))}
-        </select>
+        {admin ? (
+          <select
+            className="input"
+            value={zaposleniId}
+            onChange={(e) => setZaposleniId(e.target.value)}
+          >
+            {zaposleni.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.ime} — {z.pozicija}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className="input bg-slate-50 text-slate-500"
+            value={`${trenutniKorisnik?.ime} — ${trenutniKorisnik?.pozicija}`}
+            disabled
+          />
+        )}
       </div>
 
       <div>
@@ -130,8 +130,8 @@ export default function ZahtevForma({ onGotovo }: Props) {
         <button type="button" className="btn-ghost" onClick={onGotovo}>
           Otkaži
         </button>
-        <button type="submit" className="btn-primary">
-          Sačuvaj zahtev
+        <button type="submit" className="btn-primary" disabled={salje}>
+          {salje ? "Čuvanje..." : "Sačuvaj zahtev"}
         </button>
       </div>
     </form>

@@ -15,7 +15,13 @@ export interface Zaposleni {
   pozicija: string;
   email: string;
   uloga: Uloga;
+  lozinka?: string; // klijentski demo-login (nije prava sigurnost)
   brojDanaGodisnjeg: number; // ukupan godišnji fond dana
+}
+
+/** Admin (šef) je jedini koji može da odobrava/odbija zahteve. */
+export function jeAdmin(z: Zaposleni | null | undefined): boolean {
+  return z?.uloga === "sef";
 }
 
 export interface ZahtevZaOdsustvo {
