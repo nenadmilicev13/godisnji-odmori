@@ -6,7 +6,13 @@ import {
   javniZahtev,
 } from "@/lib/auth-server";
 import { jeAdmin } from "@/lib/types";
-import { pronadjiKonfliktDizajnera } from "@/lib/utils";
+import {
+  pronadjiKonfliktDizajnera,
+  iskorisceniGodisnji,
+  brojRadnihDana,
+} from "@/lib/utils";
+import { mejlNovZahtev } from "@/lib/email";
+import { TipOdsustva } from "@/lib/types";
 
 export async function GET() {
   const ja = await trenutniKorisnik();
@@ -45,13 +51,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Provera preklapanja dizajnera (na serveru) — protiv neodbijenih zahteva.
   const [sviZahtevi, sviZaposleni] = await Promise.all([
     prisma.zahtev.findMany(),
     prisma.zaposleni.findMany(),
   ]);
+  const javniZahtevi = sviZahtevi.map(javniZahtev);
+
+  // 1) Preklapanje dizajnera (protiv neodbijenih zahteva).
   const konflikt = pronadjiKonfliktDizajnera(
-    sviZahtevi.map(javniZahtev),
+    javniZahtevi,
     sviZaposleni.map(javniZaposleni),
     { zaposleniId, datumOd, datumDo },
   );
@@ -64,8 +72,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // 2) Kontrola godišnjeg fonda (samo za tip "godisnji").
+  if (tip === "godisnji") {
+    const podnosilac = sviZaposleni.find((z) => z.id === zaposleniId);
+    const iskorisceno = iskorisceniGodisnji(javniZahtevi, zaposleniId);
+    const trazeno = brojRadnihDana(datumOd, datumDo);
+    if (podnosilac && iskorisceno + trazeno > podnosilac.brojDanaGodisnjeg) {
+      const preostalo = podnosilac.brojDanaGodisnjeg - iskorisceno;
+      return NextResponse.json(
+        {
+          greska: `Prekoračen godišnji fond: tražite ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const noviz = await prisma.zahtev.create({
     data: { zaposleniId, tip, datumOd, datumDo, napomena, status: "na_cekanju" },
   });
+
+  // Obavesti šefa (best-effort — ne blokira odgovor pri grešci).
+  const podnosilac = sviZaposleni.find((z) => z.id === zaposleniId);
+  await mejlNovZahtev({
+    adminEmails: sviZaposleni.filter((z) => z.uloga === "sef").map((z) => z.email),
+    imePodnosioca: podnosilac?.ime ?? "Zaposleni",
+    tip: tip as TipOdsustva,
+    datumOd,
+    datumDo,
+  });
+
   return NextResponse.json({ zahtev: javniZahtev(noviz) });
 }

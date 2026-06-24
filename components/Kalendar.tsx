@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { TipOdsustva, TIP_LABELE } from "@/lib/types";
+import { nazivPraznika } from "@/lib/praznici";
 
 const DANI = ["Pon", "Uto", "Sre", "Čet", "Pet", "Sub", "Ned"];
 const MESECI = [
@@ -41,6 +42,12 @@ function jednakDan(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+function uIso(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dan = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${dan}`;
 }
 
 function prviDan(ime: string): string {
@@ -149,6 +156,7 @@ export default function Kalendar() {
         {dani.map((dan, i) => {
           const uMesecu = dan.getMonth() === mesec;
           const jeDanas = jednakDan(dan, danasnji);
+          const praznik = nazivPraznika(uIso(dan));
           const odsustva = odsustvaZaDan(dan);
 
           // Da li ima ≥2 dizajnera odsutna istog dana (kolizija).
@@ -161,7 +169,7 @@ export default function Kalendar() {
             <div
               key={i}
               className={`min-h-[104px] border-b border-r border-slate-100 p-1.5 ${
-                uMesecu ? "bg-white" : "bg-slate-50/60"
+                praznik ? "bg-amber-50" : uMesecu ? "bg-white" : "bg-slate-50/60"
               } ${kolizija ? "ring-2 ring-inset ring-rose-300" : ""}`}
             >
               <div className="mb-1 flex items-center justify-between">
@@ -169,9 +177,11 @@ export default function Kalendar() {
                   className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
                     jeDanas
                       ? "bg-brand-600 text-white"
-                      : uMesecu
-                        ? "text-slate-700"
-                        : "text-slate-400"
+                      : praznik
+                        ? "text-amber-600"
+                        : uMesecu
+                          ? "text-slate-700"
+                          : "text-slate-400"
                   }`}
                 >
                   {dan.getDate()}
@@ -185,6 +195,15 @@ export default function Kalendar() {
                   </span>
                 )}
               </div>
+
+              {praznik && (
+                <p
+                  className="mb-0.5 truncate text-[10px] font-medium text-amber-600"
+                  title={praznik}
+                >
+                  {praznik}
+                </p>
+              )}
 
               <div className="space-y-0.5">
                 {odsustva.slice(0, 3).map((z) => {

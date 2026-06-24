@@ -1,4 +1,5 @@
 import { StatusZahteva, Zaposleni, ZahtevZaOdsustvo } from "./types";
+import { jePraznik } from "./praznici";
 
 /** Generiše jednostavan jedinstveni ID bez eksternih zavisnosti. */
 export function generisiId(): string {
@@ -7,7 +8,16 @@ export function generisiId(): string {
   );
 }
 
-/** Broj radnih dana (pon–pet) između dva datuma, uključujući oba kraja. */
+function isoOd(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dan = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${dan}`;
+}
+
+/**
+ * Broj radnih dana između dva datuma (uključivo), bez vikenda i bez državnih
+ * praznika.
+ */
 export function brojRadnihDana(datumOd: string, datumDo: string): number {
   const od = new Date(datumOd);
   const doDatuma = new Date(datumDo);
@@ -18,7 +28,7 @@ export function brojRadnihDana(datumOd: string, datumDo: string): number {
   const tekuci = new Date(od);
   while (tekuci <= doDatuma) {
     const dan = tekuci.getDay(); // 0 = nedelja, 6 = subota
-    if (dan !== 0 && dan !== 6) broj++;
+    if (dan !== 0 && dan !== 6 && !jePraznik(isoOd(tekuci))) broj++;
     tekuci.setDate(tekuci.getDate() + 1);
   }
   return broj;

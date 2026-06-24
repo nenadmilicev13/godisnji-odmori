@@ -6,7 +6,12 @@ import {
   javniZahtev,
 } from "@/lib/auth-server";
 import { jeAdmin, StatusZahteva } from "@/lib/types";
-import { pronadjiKonfliktDizajnera } from "@/lib/utils";
+import {
+  pronadjiKonfliktDizajnera,
+  iskorisceniGodisnji,
+  brojRadnihDana,
+} from "@/lib/utils";
+import { mejlStatus } from "@/lib/email";
 
 /** Odobravanje/odbijanje — samo admin. */
 export async function PATCH(
@@ -57,12 +62,48 @@ export async function PATCH(
         { status: 409 },
       );
     }
+
+    // Kontrola godišnjeg fonda pri odobravanju (samo "godisnji").
+    if (zahtev.tip === "godisnji") {
+      const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
+      const iskorisceno = iskorisceniGodisnji(
+        sviZahtevi.map(javniZahtev),
+        zahtev.zaposleniId,
+      );
+      const trazeno = brojRadnihDana(zahtev.datumOd, zahtev.datumDo);
+      if (podnosilac && iskorisceno + trazeno > podnosilac.brojDanaGodisnjeg) {
+        const preostalo = podnosilac.brojDanaGodisnjeg - iskorisceno;
+        return NextResponse.json(
+          {
+            greska: `Prekoračen godišnji fond: ovaj zahtev je ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
   }
 
   const azuriran = await prisma.zahtev.update({
     where: { id: params.id },
     data: { status },
   });
+
+  // Obavesti zaposlenog o ishodu (best-effort).
+  if (status === "odobreno" || status === "odbijeno") {
+    const podnosilac = await prisma.zaposleni.findUnique({
+      where: { id: azuriran.zaposleniId },
+    });
+    if (podnosilac) {
+      await mejlStatus({
+        email: podnosilac.email,
+        ime: podnosilac.ime,
+        odobreno: status === "odobreno",
+        datumOd: azuriran.datumOd,
+        datumDo: azuriran.datumDo,
+      });
+    }
+  }
+
   return NextResponse.json({ zahtev: javniZahtev(azuriran) });
 }
 

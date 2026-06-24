@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { TipOdsustva, TIP_LABELE, jeAdmin } from "@/lib/types";
-import { brojRadnihDana, danas } from "@/lib/utils";
+import { brojRadnihDana, danas, iskorisceniGodisnji } from "@/lib/utils";
 
 interface Props {
   onGotovo: () => void;
 }
 
 export default function ZahtevForma({ onGotovo }: Props) {
-  const { zaposleni, trenutniKorisnik, dodajZahtev } = useStore();
+  const { zaposleni, zahtevi, trenutniKorisnik, dodajZahtev } = useStore();
   const admin = jeAdmin(trenutniKorisnik);
 
   // Ne-admin može da unese zahtev samo za sebe.
@@ -25,6 +25,12 @@ export default function ZahtevForma({ onGotovo }: Props) {
   const [salje, setSalje] = useState(false);
 
   const radniDani = brojRadnihDana(datumOd, datumDo);
+
+  // Stanje godišnjeg fonda za izabranog zaposlenog (samo informativno; server proverava).
+  const izabrani = zaposleni.find((z) => z.id === zaposleniId);
+  const iskorisceno = izabrani ? iskorisceniGodisnji(zahtevi, izabrani.id) : 0;
+  const preostalo = izabrani ? izabrani.brojDanaGodisnjeg - iskorisceno : 0;
+  const prekoracenje = tip === "godisnji" && izabrani && radniDani > preostalo;
 
   async function posalji(e: React.FormEvent) {
     e.preventDefault();
@@ -107,7 +113,15 @@ export default function ZahtevForma({ onGotovo }: Props) {
         <span className="font-semibold">
           {radniDani} {radniDani === 1 ? "radni dan" : "radnih dana"}
         </span>{" "}
-        <span className="text-brand-400">(bez vikenda)</span>
+        <span className="text-brand-400">(bez vikenda i praznika)</span>
+        {tip === "godisnji" && izabrani && (
+          <div
+            className={`mt-1 text-xs ${prekoracenje ? "font-medium text-rose-600" : "text-brand-500"}`}
+          >
+            Godišnji fond: preostalo {preostalo} od {izabrani.brojDanaGodisnjeg} dana
+            {prekoracenje && " — prekoračujete fond!"}
+          </div>
+        )}
       </div>
 
       <div>
