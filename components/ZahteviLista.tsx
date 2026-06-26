@@ -182,7 +182,7 @@ export default function ZahteviLista() {
                       Izmeni
                     </button>
                   )}
-                  {(admin || mojZahtev) && (
+                  {(admin || (mojZahtev && z.status === "na_cekanju")) && (
                     <button
                       onClick={() => ukloni(z)}
                       className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"

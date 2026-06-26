@@ -188,7 +188,7 @@ export async function PATCH(
   return NextResponse.json({ zahtev: javniZahtev(azuriran) });
 }
 
-/** Brisanje — admin bilo koji, zaposleni samo svoj. */
+/** Brisanje — admin bilo koji; zaposleni samo svoj i samo dok je „na čekanju". */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } },
@@ -200,11 +200,19 @@ export async function DELETE(
   if (!zahtev) return NextResponse.json({ ok: true });
 
   const admin = jeAdmin(javniZaposleni(ja));
-  if (!admin && zahtev.zaposleniId !== ja.id) {
-    return NextResponse.json(
-      { greska: "Možete obrisati samo sopstveni zahtev." },
-      { status: 403 },
-    );
+  if (!admin) {
+    if (zahtev.zaposleniId !== ja.id) {
+      return NextResponse.json(
+        { greska: "Možete obrisati samo sopstveni zahtev." },
+        { status: 403 },
+      );
+    }
+    if (zahtev.status !== "na_cekanju") {
+      return NextResponse.json(
+        { greska: "Odobren zahtev ne možete obrisati — obratite se šefu." },
+        { status: 409 },
+      );
+    }
   }
 
   await prisma.zahtev.delete({ where: { id: params.id } }).catch(() => null);
