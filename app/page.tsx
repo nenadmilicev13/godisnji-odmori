@@ -56,11 +56,11 @@ export default function Home() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Logo className="h-9 w-auto text-slate-900" />
-            <div className="hidden border-l border-slate-200 pl-3 sm:block">
-              <h1 className="text-sm font-bold text-slate-900">Godišnji odmori</h1>
-              <p className="text-xs text-slate-500">Upravljanje odsustvima</p>
-            </div>
+            <Logo className="h-6 w-auto text-slate-900" />
+            <span className="hidden h-6 w-px bg-slate-200 sm:block" />
+            <h1 className="hidden text-sm font-semibold text-slate-600 sm:block">
+              Godišnji odmori
+            </h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">

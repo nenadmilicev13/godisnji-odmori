@@ -3,7 +3,7 @@ export default function Logo({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 202 112"
+      viewBox="23 35 157 40"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"

@@ -23,8 +23,8 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <Logo className="h-12 w-auto text-slate-900" />
+        <div className="mb-7 flex flex-col items-center gap-4 text-center">
+          <Logo className="h-9 w-auto text-slate-900" />
           <div>
             <h1 className="text-lg font-bold text-slate-900">Godišnji odmori</h1>
             <p className="text-sm text-slate-500">Prijavite se da nastavite</p>
