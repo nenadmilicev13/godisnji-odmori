@@ -90,9 +90,11 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
           <p className="text-lg font-semibold text-slate-900">{ime || z.ime}</p>
           <p className="text-sm text-slate-500">{z.pozicija}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-              {ULOGA_LABELE[z.uloga]}
-            </span>
+            {z.uloga === "dizajner" && (
+              <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
+                {ULOGA_LABELE[z.uloga]}
+              </span>
+            )}
             <span className="text-xs text-slate-400">{z.email}</span>
           </div>
         </div>
