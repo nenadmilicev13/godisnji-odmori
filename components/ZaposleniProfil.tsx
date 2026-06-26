@@ -25,9 +25,39 @@ function formatDanMesec(iso: string | null | undefined): string {
 }
 
 export default function ZaposleniProfil({ zaposleni: z }: Props) {
-  const { zahtevi, trenutniKorisnik, azurirajProfil } = useStore();
+  const { zahtevi, trenutniKorisnik, azurirajProfil, promeniLozinku } = useStore();
 
-  const mogeIzmena = jeAdmin(trenutniKorisnik) || trenutniKorisnik?.id === z.id;
+  const jeVlasnik = trenutniKorisnik?.id === z.id;
+  const mogeIzmena = jeAdmin(trenutniKorisnik) || jeVlasnik;
+
+  // Promena lozinke
+  const [lozinkaOtvorena, setLozinkaOtvorena] = useState(false);
+  const [staraLozinka, setStaraLozinka] = useState("");
+  const [novaLozinka, setNovaLozinka] = useState("");
+  const [lozinkaPoruka, setLozinkaPoruka] = useState("");
+  const [lozinkaOk, setLozinkaOk] = useState(false);
+  const [cuvaLozinku, setCuvaLozinku] = useState(false);
+
+  async function sacuvajLozinku() {
+    if (novaLozinka.length < 6) {
+      setLozinkaOk(false);
+      return setLozinkaPoruka("Lozinka mora imati bar 6 karaktera.");
+    }
+    setCuvaLozinku(true);
+    const g = await promeniLozinku(
+      z.id,
+      jeVlasnik ? { staraLozinka, novaLozinka } : { novaLozinka },
+    );
+    setCuvaLozinku(false);
+    if (g) {
+      setLozinkaOk(false);
+      return setLozinkaPoruka(g);
+    }
+    setLozinkaOk(true);
+    setLozinkaPoruka("Lozinka je promenjena.");
+    setStaraLozinka("");
+    setNovaLozinka("");
+  }
   const [izmena, setIzmena] = useState(false);
   const [ime, setIme] = useState(z.ime);
   const [rodjendan, setRodjendan] = useState(z.rodjendan ?? "");
@@ -177,6 +207,83 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
           </div>
         )}
       </div>
+
+      {/* Lozinka */}
+      {mogeIzmena && (
+        <div className="rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-slate-700">
+              {jeVlasnik ? "Lozinka" : "Resetuj lozinku"}
+            </h4>
+            {!lozinkaOtvorena && (
+              <button
+                onClick={() => {
+                  setLozinkaOtvorena(true);
+                  setLozinkaPoruka("");
+                }}
+                className="text-xs font-medium text-brand-600 hover:text-brand-700"
+              >
+                {jeVlasnik ? "Promeni lozinku" : "Postavi novu"}
+              </button>
+            )}
+          </div>
+
+          {lozinkaOtvorena && (
+            <div className="mt-3 space-y-3">
+              {jeVlasnik && (
+                <div>
+                  <label className="label">Trenutna lozinka</label>
+                  <input
+                    type="password"
+                    className="input"
+                    value={staraLozinka}
+                    onChange={(e) => setStaraLozinka(e.target.value)}
+                  />
+                </div>
+              )}
+              <div>
+                <label className="label">Nova lozinka</label>
+                <input
+                  type="password"
+                  className="input"
+                  value={novaLozinka}
+                  placeholder="bar 6 karaktera"
+                  onChange={(e) => setNovaLozinka(e.target.value)}
+                />
+              </div>
+              {lozinkaPoruka && (
+                <p
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    lozinkaOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+                  }`}
+                >
+                  {lozinkaPoruka}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  className="btn-ghost px-3 py-1.5 text-sm"
+                  onClick={() => {
+                    setLozinkaOtvorena(false);
+                    setStaraLozinka("");
+                    setNovaLozinka("");
+                    setLozinkaPoruka("");
+                  }}
+                >
+                  Zatvori
+                </button>
+                <button
+                  className="btn-primary px-3 py-1.5 text-sm"
+                  onClick={sacuvajLozinku}
+                  disabled={cuvaLozinku}
+                >
+                  {cuvaLozinku ? "Čuvanje..." : "Sačuvaj lozinku"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Godišnji fond */}
       <div className="rounded-xl border border-slate-200 p-4">

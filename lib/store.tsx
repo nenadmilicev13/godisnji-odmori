@@ -32,6 +32,10 @@ interface StoreContext {
     id: string,
     podaci: { ime?: string; rodjendan?: string | null; slava?: string | null },
   ) => Promise<string | null>;
+  promeniLozinku: (
+    id: string,
+    podaci: { staraLozinka?: string; novaLozinka: string },
+  ) => Promise<string | null>;
   obrisiZaposlenog: (id: string) => Promise<string | null>;
 }
 
@@ -186,6 +190,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [ucitajPodatke],
   );
 
+  const promeniLozinku = useCallback<StoreContext["promeniLozinku"]>(
+    async (id, podaci) => {
+      const res = await fetch(`/api/zaposleni/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(podaci),
+      });
+      return greskaIz(res);
+    },
+    [],
+  );
+
   const obrisiZaposlenog = useCallback<StoreContext["obrisiZaposlenog"]>(
     async (id) => {
       const res = await fetch(`/api/zaposleni/${id}`, { method: "DELETE" });
@@ -211,6 +227,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       obrisiZahtev,
       dodajZaposlenog,
       azurirajProfil,
+      promeniLozinku,
       obrisiZaposlenog,
     }),
     [
@@ -226,6 +243,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       obrisiZahtev,
       dodajZaposlenog,
       azurirajProfil,
+      promeniLozinku,
       obrisiZaposlenog,
     ],
   );

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { trenutniKorisnik, javniZaposleni } from "@/lib/auth-server";
 import { jeAdmin } from "@/lib/types";
 
-/** Izmena profila (rođendan, slava) — vlasnik naloga ili admin. */
+/** Izmena profila (ime, rođendan, slava, lozinka) — vlasnik naloga ili admin. */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
@@ -20,6 +21,32 @@ export async function PATCH(
   }
 
   const body = await req.json().catch(() => ({}));
+
+  // ——— Promena lozinke ———
+  if (typeof body.novaLozinka === "string" && body.novaLozinka) {
+    if (body.novaLozinka.length < 6) {
+      return NextResponse.json(
+        { greska: "Lozinka mora imati bar 6 karaktera." },
+        { status: 400 },
+      );
+    }
+    // Vlasnik mora potvrditi trenutnu lozinku; admin može da resetuje tuđu bez nje.
+    if (ja.id === params.id) {
+      const me = await prisma.zaposleni.findUnique({ where: { id: params.id } });
+      if (!me || !(await bcrypt.compare(String(body.staraLozinka ?? ""), me.lozinkaHash))) {
+        return NextResponse.json(
+          { greska: "Trenutna lozinka nije tačna." },
+          { status: 403 },
+        );
+      }
+    }
+    await prisma.zaposleni.update({
+      where: { id: params.id },
+      data: { lozinkaHash: await bcrypt.hash(body.novaLozinka, 10) },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   const data: { ime?: string; rodjendan?: string | null; slava?: string | null } = {};
 
   if (typeof body.ime === "string") {
