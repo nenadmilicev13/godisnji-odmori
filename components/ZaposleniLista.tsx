@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { Uloga, ULOGA_LABELE, jeAdmin } from "@/lib/types";
+import { Uloga, ULOGA_LABELE, jeAdmin, Zaposleni } from "@/lib/types";
 import { iskorisceniGodisnji } from "@/lib/utils";
 import Modal from "./Modal";
+import ZaposleniProfil from "./ZaposleniProfil";
 
 export default function ZaposleniLista() {
   const {
@@ -22,6 +23,7 @@ export default function ZaposleniLista() {
   const [uloga, setUloga] = useState<Uloga>("ostalo");
   const [dani, setDani] = useState(20);
   const [greska, setGreska] = useState("");
+  const [profil, setProfil] = useState<Zaposleni | null>(null);
 
   async function dodaj(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +68,11 @@ export default function ZaposleniLista() {
             Math.round((iskorisceno / z.brojDanaGodisnjeg) * 100) || 0,
           );
           return (
-            <div key={z.id} className="card p-5">
+            <div
+              key={z.id}
+              onClick={() => setProfil(z)}
+              className="card cursor-pointer p-5 transition hover:border-brand-300 hover:shadow-md"
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
@@ -88,7 +94,10 @@ export default function ZaposleniLista() {
                 </div>
                 {admin && (
                   <button
-                    onClick={async () => setGreska((await obrisiZaposlenog(z.id)) ?? "")}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setGreska((await obrisiZaposlenog(z.id)) ?? "");
+                    }}
                     className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-rose-600"
                     aria-label="Obriši"
                   >
@@ -115,11 +124,25 @@ export default function ZaposleniLista() {
                 <p className="mt-1.5 text-xs text-slate-400">
                   Preostalo {preostalo} dana godišnjeg odmora
                 </p>
+                <p className="mt-2 flex items-center gap-1 text-xs font-medium text-brand-500">
+                  Pogledaj profil
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </p>
               </div>
             </div>
           );
         })}
       </div>
+
+      <Modal
+        otvoren={!!profil}
+        naslov="Profil zaposlenog"
+        onZatvori={() => setProfil(null)}
+      >
+        {profil && <ZaposleniProfil zaposleni={profil} />}
+      </Modal>
 
       <Modal
         otvoren={otvoren}
