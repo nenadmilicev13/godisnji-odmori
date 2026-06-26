@@ -45,19 +45,36 @@ export function formatDatum(iso: string): string {
   });
 }
 
-/** Zbir iskorišćenih dana godišnjeg odmora za zaposlenog (samo odobreni zahtevi). */
-export function iskorisceniGodisnji(
+/**
+ * Zbir zauzetih dana godišnjeg odmora: svi NEodbijeni zahtevi (na čekanju +
+ * odobreni), uključujući retroaktivne (prošli datumi). Time se dani skidaju od
+ * fonda čim se zahtev unese, ne tek po odobravanju.
+ *
+ * @param ignorirajId opциono izostavi jedan zahtev (npr. onaj koji se upravo
+ *        odobrava/pomera) da se ne bi dvostruko brojao.
+ */
+export function zauzetiGodisnji(
   zahtevi: ZahtevZaOdsustvo[],
   zaposleniId: string,
+  ignorirajId?: string,
 ): number {
   return zahtevi
     .filter(
       (z) =>
         z.zaposleniId === zaposleniId &&
         z.tip === "godisnji" &&
-        z.status === "odobreno",
+        z.status !== "odbijeno" &&
+        z.id !== ignorirajId,
     )
     .reduce((zbir, z) => zbir + brojRadnihDana(z.datumOd, z.datumDo), 0);
+}
+
+/** Iskorišćeni/zauzeti dani godišnjeg (na čekanju + odobreni). */
+export function iskorisceniGodisnji(
+  zahtevi: ZahtevZaOdsustvo[],
+  zaposleniId: string,
+): number {
+  return zauzetiGodisnji(zahtevi, zaposleniId);
 }
 
 export function danas(): string {

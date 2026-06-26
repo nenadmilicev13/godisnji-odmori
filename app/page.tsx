@@ -132,7 +132,7 @@ export default function Home() {
               <StatCard
                 naslov="Iskorišćeno (godišnji)"
                 vrednost={mojIskorisceni}
-                opis="Odobreno"
+                opis="Uneto + odobreno"
                 ikona={<IkonaCek />}
                 boja="rose"
               />

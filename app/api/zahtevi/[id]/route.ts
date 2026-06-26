@@ -8,7 +8,7 @@ import {
 import { jeAdmin, StatusZahteva } from "@/lib/types";
 import {
   pronadjiKonfliktDizajnera,
-  iskorisceniGodisnji,
+  zauzetiGodisnji,
   brojRadnihDana,
 } from "@/lib/utils";
 import { mejlStatus } from "@/lib/email";
@@ -72,18 +72,10 @@ export async function PATCH(
     // Kontrola fonda (samo "godisnji"), bez ovog zahteva.
     if (zahtev.tip === "godisnji") {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
-      const iskoriscenoBezOvog = javniZahtevi
-        .filter(
-          (z) =>
-            z.zaposleniId === zahtev.zaposleniId &&
-            z.tip === "godisnji" &&
-            z.status === "odobreno" &&
-            z.id !== zahtev.id,
-        )
-        .reduce((s, z) => s + brojRadnihDana(z.datumOd, z.datumDo), 0);
+      const zauzeto = zauzetiGodisnji(javniZahtevi, zahtev.zaposleniId, zahtev.id);
       const trazeno = brojRadnihDana(datumOd, datumDo);
-      if (podnosilac && iskoriscenoBezOvog + trazeno > podnosilac.brojDanaGodisnjeg) {
-        const preostalo = podnosilac.brojDanaGodisnjeg - iskoriscenoBezOvog;
+      if (podnosilac && zauzeto + trazeno > podnosilac.brojDanaGodisnjeg) {
+        const preostalo = podnosilac.brojDanaGodisnjeg - zauzeto;
         return NextResponse.json(
           {
             greska: `Prekoračen fond: novi termin je ${trazeno} dana, preostalo ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
@@ -135,13 +127,14 @@ export async function PATCH(
     // Kontrola godišnjeg fonda pri odobravanju (samo "godisnji").
     if (zahtev.tip === "godisnji") {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
-      const iskorisceno = iskorisceniGodisnji(
+      const zauzeto = zauzetiGodisnji(
         sviZahtevi.map(javniZahtev),
         zahtev.zaposleniId,
+        zahtev.id,
       );
       const trazeno = brojRadnihDana(zahtev.datumOd, zahtev.datumDo);
-      if (podnosilac && iskorisceno + trazeno > podnosilac.brojDanaGodisnjeg) {
-        const preostalo = podnosilac.brojDanaGodisnjeg - iskorisceno;
+      if (podnosilac && zauzeto + trazeno > podnosilac.brojDanaGodisnjeg) {
+        const preostalo = podnosilac.brojDanaGodisnjeg - zauzeto;
         return NextResponse.json(
           {
             greska: `Prekoračen godišnji fond: ovaj zahtev je ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
