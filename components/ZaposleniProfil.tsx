@@ -29,14 +29,17 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
 
   const mogeIzmena = jeAdmin(trenutniKorisnik) || trenutniKorisnik?.id === z.id;
   const [izmena, setIzmena] = useState(false);
+  const [ime, setIme] = useState(z.ime);
   const [rodjendan, setRodjendan] = useState(z.rodjendan ?? "");
   const [slava, setSlava] = useState(z.slava ?? "");
   const [cuva, setCuva] = useState(false);
   const [greska, setGreska] = useState("");
 
   async function sacuvaj() {
+    if (!ime.trim()) return setGreska("Ime i prezime ne mogu biti prazni.");
     setCuva(true);
     const g = await azurirajProfil(z.id, {
+      ime: ime.trim(),
       rodjendan: rodjendan || null,
       slava: slava.trim() || null,
     });
@@ -70,7 +73,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
     }))
     .filter((x) => x.dana > 0);
 
-  const inicijali = z.ime
+  const inicijali = (ime || z.ime)
     .split(" ")
     .map((d) => d[0])
     .slice(0, 2)
@@ -84,7 +87,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
           {inicijali}
         </div>
         <div className="min-w-0">
-          <p className="text-lg font-semibold text-slate-900">{z.ime}</p>
+          <p className="text-lg font-semibold text-slate-900">{ime || z.ime}</p>
           <p className="text-sm text-slate-500">{z.pozicija}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
@@ -112,6 +115,15 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
         {izmena ? (
           <div className="space-y-3">
             <div>
+              <label className="label">Ime i prezime</label>
+              <input
+                className="input"
+                value={ime}
+                placeholder="npr. Petar Petrović"
+                onChange={(e) => setIme(e.target.value)}
+              />
+            </div>
+            <div>
               <label className="label">🎂 Rođendan</label>
               <input
                 type="date"
@@ -137,6 +149,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
                 className="btn-ghost px-3 py-1.5 text-sm"
                 onClick={() => {
                   setIzmena(false);
+                  setIme(z.ime);
                   setRodjendan(z.rodjendan ?? "");
                   setSlava(z.slava ?? "");
                   setGreska("");

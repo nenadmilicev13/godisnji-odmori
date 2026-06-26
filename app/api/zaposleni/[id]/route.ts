@@ -20,14 +20,27 @@ export async function PATCH(
   }
 
   const body = await req.json().catch(() => ({}));
-  const rodjendan =
-    typeof body.rodjendan === "string" && body.rodjendan ? body.rodjendan : null;
-  const slava =
-    typeof body.slava === "string" && body.slava.trim() ? body.slava.trim() : null;
+  const data: { ime?: string; rodjendan?: string | null; slava?: string | null } = {};
+
+  if (typeof body.ime === "string") {
+    const ime = body.ime.trim();
+    if (!ime) {
+      return NextResponse.json({ greska: "Ime ne može biti prazno." }, { status: 400 });
+    }
+    data.ime = ime;
+  }
+  if ("rodjendan" in body) {
+    data.rodjendan =
+      typeof body.rodjendan === "string" && body.rodjendan ? body.rodjendan : null;
+  }
+  if ("slava" in body) {
+    data.slava =
+      typeof body.slava === "string" && body.slava.trim() ? body.slava.trim() : null;
+  }
 
   const azuriran = await prisma.zaposleni.update({
     where: { id: params.id },
-    data: { rodjendan, slava },
+    data,
   });
   return NextResponse.json({ zaposleni: javniZaposleni(azuriran) });
 }
