@@ -14,11 +14,27 @@ import {
 import { mejlNovZahtev } from "@/lib/email";
 import { TipOdsustva } from "@/lib/types";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const ja = await trenutniKorisnik();
   if (!ja) return NextResponse.json({ greska: "Niste prijavljeni." }, { status: 401 });
 
-  const lista = await prisma.zahtev.findMany({ orderBy: { kreirano: "desc" } });
+  // Korpa (obrisani) — samo admin.
+  const korpa = new URL(req.url).searchParams.get("korpa") === "1";
+  if (korpa) {
+    if (!jeAdmin(javniZaposleni(ja))) {
+      return NextResponse.json({ greska: "Samo admin." }, { status: 403 });
+    }
+    const obrisani = await prisma.zahtev.findMany({
+      where: { obrisanoKad: { not: null } },
+      orderBy: { obrisanoKad: "desc" },
+    });
+    return NextResponse.json({ zahtevi: obrisani.map(javniZahtev) });
+  }
+
+  const lista = await prisma.zahtev.findMany({
+    where: { obrisanoKad: null },
+    orderBy: { kreirano: "desc" },
+  });
   return NextResponse.json({ zahtevi: lista.map(javniZahtev) });
 }
 
@@ -59,7 +75,7 @@ export async function POST(req: NextRequest) {
   }
 
   const [sviZahtevi, sviZaposleni] = await Promise.all([
-    prisma.zahtev.findMany(),
+    prisma.zahtev.findMany({ where: { obrisanoKad: null } }),
     prisma.zaposleni.findMany(),
   ]);
   const javniZahtevi = sviZahtevi.map(javniZahtev);

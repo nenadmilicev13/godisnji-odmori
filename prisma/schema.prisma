@@ -36,6 +36,7 @@ model Zahtev {
   napomena    String    @default("")
   status      String    @default("na_cekanju") // na_cekanju | odobreno | odbijeno
   kreirano    DateTime  @default(now())
+  obrisanoKad DateTime? // soft-delete: null = aktivan, datum = u korpi
 
   @@index([zaposleniId])
 }

@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Zaposleni, ZahtevZaOdsustvo, StatusZahteva } from "./types";
@@ -31,6 +32,10 @@ interface StoreContext {
     datumDo: string,
   ) => Promise<string | null>;
   obrisiZahtev: (id: string) => Promise<string | null>;
+  vratiZahtev: (id: string) => Promise<string | null>;
+  trajnoObrisi: (id: string) => Promise<string | null>;
+  nedavnoObrisan: string | null;
+  zatvoriUndo: () => void;
   dodajZaposlenog: (z: Omit<Zaposleni, "id">) => Promise<string | null>;
   azurirajProfil: (
     id: string,
@@ -66,6 +71,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [zahtevi, setZahtevi] = useState<ZahtevZaOdsustvo[]>([]);
   const [trenutniKorisnik, setKorisnik] = useState<Zaposleni | null>(null);
   const [ucitano, setUcitano] = useState(false);
+  const [nedavnoObrisan, setNedavnoObrisan] = useState<string | null>(null);
+  const undoTajmer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ucitajPodatke = useCallback(async () => {
     const [rz, rzh] = await Promise.all([
@@ -173,9 +180,41 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [ucitajPodatke],
   );
 
+  const zatvoriUndo = useCallback(() => {
+    if (undoTajmer.current) clearTimeout(undoTajmer.current);
+    setNedavnoObrisan(null);
+  }, []);
+
   const obrisiZahtev = useCallback<StoreContext["obrisiZahtev"]>(
     async (id) => {
       const res = await fetch(`/api/zahtevi/${id}`, { method: "DELETE" });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      // Ponudi „Vrati" (toast) ~7s.
+      if (undoTajmer.current) clearTimeout(undoTajmer.current);
+      setNedavnoObrisan(id);
+      undoTajmer.current = setTimeout(() => setNedavnoObrisan(null), 7000);
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
+  const vratiZahtev = useCallback<StoreContext["vratiZahtev"]>(
+    async (id) => {
+      const res = await fetch(`/api/zahtevi/${id}/vrati`, { method: "POST" });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      zatvoriUndo();
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke, zatvoriUndo],
+  );
+
+  const trajnoObrisi = useCallback<StoreContext["trajnoObrisi"]>(
+    async (id) => {
+      const res = await fetch(`/api/zahtevi/${id}?trajno=1`, { method: "DELETE" });
       const greska = await greskaIz(res);
       if (greska) return greska;
       await ucitajPodatke();
@@ -250,6 +289,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       izmeniZahtev,
       pomeriZahtev,
       obrisiZahtev,
+      vratiZahtev,
+      trajnoObrisi,
+      nedavnoObrisan,
+      zatvoriUndo,
       dodajZaposlenog,
       azurirajProfil,
       promeniLozinku,
@@ -267,6 +310,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       izmeniZahtev,
       pomeriZahtev,
       obrisiZahtev,
+      vratiZahtev,
+      trajnoObrisi,
+      nedavnoObrisan,
+      zatvoriUndo,
       dodajZaposlenog,
       azurirajProfil,
       promeniLozinku,

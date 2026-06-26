@@ -14,8 +14,10 @@ import KoJeOdsutan from "@/components/KoJeOdsutan";
 import RodjendaniSlave from "@/components/RodjendaniSlave";
 import LoginPage from "@/components/LoginPage";
 import Logo from "@/components/Logo";
+import Korpa from "@/components/Korpa";
+import ToastUndo from "@/components/ToastUndo";
 
-type Tab = "pregled" | "kalendar" | "zaposleni";
+type Tab = "pregled" | "kalendar" | "zaposleni" | "korpa";
 
 export default function Home() {
   const { zaposleni, zahtevi, ucitano, trenutniKorisnik, odjava } = useStore();
@@ -191,6 +193,18 @@ export default function Home() {
           >
             Zaposleni
           </button>
+          {admin && (
+            <button
+              onClick={() => setTab("korpa")}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                tab === "korpa"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              🗑️ Korpa
+            </button>
+          )}
         </div>
 
         <div className="animate-fade-in">
@@ -198,6 +212,8 @@ export default function Home() {
             <ZahteviLista />
           ) : tab === "kalendar" ? (
             <Kalendar />
+          ) : tab === "korpa" && admin ? (
+            <Korpa />
           ) : (
             <ZaposleniLista />
           )}
@@ -205,7 +221,7 @@ export default function Home() {
       </main>
 
       <footer className="mx-auto max-w-6xl px-4 py-6 text-center text-xs text-slate-400 sm:px-6">
-        Godišnji odmori · Podaci se čuvaju lokalno u vašem pregledaču
+        Godišnji odmori · Baseline
       </footer>
 
       <Modal
@@ -215,6 +231,8 @@ export default function Home() {
       >
         <ZahtevForma onGotovo={() => setFormaOtvorena(false)} />
       </Modal>
+
+      <ToastUndo />
     </div>
   );
 }

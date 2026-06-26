@@ -64,7 +64,7 @@ export async function PATCH(
     }
 
     const [sviZahtevi, sviZaposleni] = await Promise.all([
-      prisma.zahtev.findMany(),
+      prisma.zahtev.findMany({ where: { obrisanoKad: null } }),
       prisma.zaposleni.findMany(),
     ]);
     const javniZahtevi = sviZahtevi.map(javniZahtev);
@@ -120,7 +120,7 @@ export async function PATCH(
   // Pri odobravanju: spreči koliziju sa već odobrenim odsustvom drugog dizajnera.
   if (status === "odobreno") {
     const [sviZahtevi, sviZaposleni] = await Promise.all([
-      prisma.zahtev.findMany(),
+      prisma.zahtev.findMany({ where: { obrisanoKad: null } }),
       prisma.zaposleni.findMany(),
     ]);
     const konflikt = pronadjiKonfliktDizajnera(
@@ -188,9 +188,12 @@ export async function PATCH(
   return NextResponse.json({ zahtev: javniZahtev(azuriran) });
 }
 
-/** Brisanje — admin bilo koji; zaposleni samo svoj i samo dok je „na čekanju". */
+/**
+ * Brisanje. Podrazumevano „meko" (ide u korpu) — admin bilo koji; zaposleni
+ * samo svoj i samo dok je „na čekanju". `?trajno=1` trajno briše (samo admin).
+ */
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } },
 ) {
   const ja = await trenutniKorisnik();
@@ -200,6 +203,16 @@ export async function DELETE(
   if (!zahtev) return NextResponse.json({ ok: true });
 
   const admin = jeAdmin(javniZaposleni(ja));
+  const trajno = new URL(req.url).searchParams.get("trajno") === "1";
+
+  if (trajno) {
+    if (!admin) {
+      return NextResponse.json({ greska: "Samo admin." }, { status: 403 });
+    }
+    await prisma.zahtev.delete({ where: { id: params.id } }).catch(() => null);
+    return NextResponse.json({ ok: true });
+  }
+
   if (!admin) {
     if (zahtev.zaposleniId !== ja.id) {
       return NextResponse.json(
@@ -215,6 +228,10 @@ export async function DELETE(
     }
   }
 
-  await prisma.zahtev.delete({ where: { id: params.id } }).catch(() => null);
+  // Meko brisanje (u korpu).
+  await prisma.zahtev.update({
+    where: { id: params.id },
+    data: { obrisanoKad: new Date() },
+  });
   return NextResponse.json({ ok: true });
 }
