@@ -9,7 +9,11 @@ import {
   trosiFond,
   tipoviZaUnos,
 } from "@/lib/types";
-import { brojRadnihDana, danas, iskorisceniGodisnji } from "@/lib/utils";
+import {
+  brojRadnihDana,
+  danas,
+  iskorisceniGodisnjiUGodini,
+} from "@/lib/utils";
 
 interface Props {
   onGotovo: () => void;
@@ -32,9 +36,12 @@ export default function ZahtevForma({ onGotovo }: Props) {
 
   const radniDani = brojRadnihDana(datumOd, datumDo);
 
-  // Stanje godišnjeg fonda za izabranog zaposlenog (samo informativno; server proverava).
+  // Stanje godišnjeg fonda za izabranog zaposlenog u godini termina (informativno; server proverava).
+  const godinaTermina = Number(datumOd.slice(0, 4));
   const izabrani = zaposleni.find((z) => z.id === zaposleniId);
-  const iskorisceno = izabrani ? iskorisceniGodisnji(zahtevi, izabrani.id) : 0;
+  const iskorisceno = izabrani
+    ? iskorisceniGodisnjiUGodini(zahtevi, izabrani.id, godinaTermina)
+    : 0;
   const preostalo = izabrani ? izabrani.brojDanaGodisnjeg - iskorisceno : 0;
   const prekoracenje = trosiFond(tip) && izabrani && radniDani > preostalo;
 
@@ -124,7 +131,8 @@ export default function ZahtevForma({ onGotovo }: Props) {
           <div
             className={`mt-1 text-xs ${prekoracenje ? "font-medium text-rose-600" : "text-brand-500"}`}
           >
-            Godišnji fond: preostalo {preostalo} od {izabrani.brojDanaGodisnjeg} dana
+            Godišnji fond {godinaTermina}: preostalo {preostalo} od{" "}
+            {izabrani.brojDanaGodisnjeg} dana
             {prekoracenje && " — prekoračujete fond!"}
           </div>
         )}

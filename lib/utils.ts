@@ -69,12 +69,86 @@ export function zauzetiGodisnji(
     .reduce((zbir, z) => zbir + brojRadnihDana(z.datumOd, z.datumDo), 0);
 }
 
-/** Iskorišćeni/zauzeti dani godišnjeg (na čekanju + odobreni). */
+/** Iskorišćeni/zauzeti dani godišnjeg (na čekanju + odobreni), sve godine. */
 export function iskorisceniGodisnji(
   zahtevi: ZahtevZaOdsustvo[],
   zaposleniId: string,
 ): number {
   return zauzetiGodisnji(zahtevi, zaposleniId);
+}
+
+/** Radni dani između dva datuma koji padaju u traženu kalendarsku godinu. */
+export function brojRadnihDanaUGodini(
+  datumOd: string,
+  datumDo: string,
+  godina: number,
+): number {
+  const od = new Date(datumOd);
+  const doDatuma = new Date(datumDo);
+  if (isNaN(od.getTime()) || isNaN(doDatuma.getTime()) || od > doDatuma) return 0;
+  let broj = 0;
+  const tekuci = new Date(od);
+  while (tekuci <= doDatuma) {
+    const dan = tekuci.getDay();
+    if (
+      tekuci.getFullYear() === godina &&
+      dan !== 0 &&
+      dan !== 6 &&
+      !jePraznik(isoOd(tekuci))
+    )
+      broj++;
+    tekuci.setDate(tekuci.getDate() + 1);
+  }
+  return broj;
+}
+
+/** Zauzeti dani godišnjeg fonda za konkretnu godinu (na čekanju + odobreni). */
+export function iskorisceniGodisnjiUGodini(
+  zahtevi: ZahtevZaOdsustvo[],
+  zaposleniId: string,
+  godina: number,
+  ignorirajId?: string,
+): number {
+  return zahtevi
+    .filter(
+      (z) =>
+        z.zaposleniId === zaposleniId &&
+        trosiFond(z.tip) &&
+        z.status !== "odbijeno" &&
+        z.id !== ignorirajId,
+    )
+    .reduce((s, z) => s + brojRadnihDanaUGodini(z.datumOd, z.datumDo, godina), 0);
+}
+
+/**
+ * Provera godišnjeg fonda po godini (fond se resetuje svake godine). Vraća
+ * poruku greške ako termin prekoračuje fond bilo koje godine koju dotiče.
+ */
+export function proveriGodisnjiFond(
+  zahtevi: ZahtevZaOdsustvo[],
+  podnosilac: { id: string; brojDanaGodisnjeg: number },
+  datumOd: string,
+  datumDo: string,
+  ignorirajId?: string,
+): string | null {
+  const g1 = Number(datumOd.slice(0, 4));
+  const g2 = Number(datumDo.slice(0, 4));
+  const godine = g1 === g2 ? [g1] : [g1, g2];
+  for (const g of godine) {
+    const trazeno = brojRadnihDanaUGodini(datumOd, datumDo, g);
+    if (trazeno === 0) continue;
+    const iskorisceno = iskorisceniGodisnjiUGodini(
+      zahtevi,
+      podnosilac.id,
+      g,
+      ignorirajId,
+    );
+    if (iskorisceno + trazeno > podnosilac.brojDanaGodisnjeg) {
+      const preostalo = podnosilac.brojDanaGodisnjeg - iskorisceno;
+      return `Prekoračen fond za ${g}: traženo ${trazeno}, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg} dana.`;
+    }
+  }
+  return null;
 }
 
 export function danas(): string {

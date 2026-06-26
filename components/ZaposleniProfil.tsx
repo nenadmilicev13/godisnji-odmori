@@ -10,7 +10,11 @@ import {
   ULOGA_LABELE,
   jeAdmin,
 } from "@/lib/types";
-import { brojRadnihDana, formatDatum, iskorisceniGodisnji } from "@/lib/utils";
+import {
+  brojRadnihDana,
+  formatDatum,
+  iskorisceniGodisnjiUGodini,
+} from "@/lib/utils";
 import Badge from "./Badge";
 
 interface Props {
@@ -137,7 +141,8 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
     .filter((r) => r.zaposleniId === z.id)
     .sort((a, b) => b.datumOd.localeCompare(a.datumOd));
 
-  const iskorisceno = iskorisceniGodisnji(zahtevi, z.id);
+  const [godina, setGodina] = useState(new Date().getFullYear());
+  const iskorisceno = iskorisceniGodisnjiUGodini(zahtevi, z.id, godina);
   const preostalo = z.brojDanaGodisnjeg - iskorisceno;
   const procenat = Math.min(
     100,
@@ -362,10 +367,26 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
         </div>
       )}
 
-      {/* Godišnji fond */}
+      {/* Godišnji fond (po godini) */}
       <div className="rounded-xl border border-slate-200 p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm text-slate-500">Godišnji fond za</span>
+          <select
+            className="input h-8 w-28 py-1 text-sm"
+            value={godina}
+            onChange={(e) => setGodina(Number(e.target.value))}
+          >
+            {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 1 + i).map(
+              (g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
         <div className="mb-1.5 flex justify-between text-sm">
-          <span className="text-slate-500">Iskorišćeno godišnjeg</span>
+          <span className="text-slate-500">Iskorišćeno</span>
           <span className="font-medium text-slate-700">
             {iskorisceno} / {z.brojDanaGodisnjeg} dana
           </span>

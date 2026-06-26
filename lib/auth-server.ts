@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { trenutniKorisnikId } from "./session";
-import { Zaposleni, ZahtevZaOdsustvo } from "./types";
+import { Notifikacija, Zaposleni, ZahtevZaOdsustvo } from "./types";
 
 /** Puni zapis prijavljenog zaposlenog (sa lozinkaHash) ili null. */
 export async function trenutniKorisnik() {
@@ -47,6 +47,24 @@ type ZahtevRed = {
   status: string;
   kreirano: Date;
 };
+
+export function javniNotifikacija(n: {
+  id: string;
+  korisnikId: string;
+  tekst: string;
+  link: string | null;
+  procitano: boolean;
+  kreirano: Date;
+}): Notifikacija {
+  return {
+    id: n.id,
+    korisnikId: n.korisnikId,
+    tekst: n.tekst,
+    link: n.link,
+    procitano: n.procitano,
+    kreirano: n.kreirano.toISOString(),
+  };
+}
 
 export function javniZahtev(z: ZahtevRed): ZahtevZaOdsustvo {
   return {

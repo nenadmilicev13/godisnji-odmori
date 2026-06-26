@@ -8,11 +8,10 @@ import {
 import { jeAdmin, trosiFond } from "@/lib/types";
 import {
   pronadjiKonfliktDizajnera,
-  iskorisceniGodisnji,
-  brojRadnihDana,
+  proveriGodisnjiFond,
 } from "@/lib/utils";
 import { mejlNovZahtev } from "@/lib/email";
-import { TipOdsustva } from "@/lib/types";
+import { TipOdsustva, TIP_LABELE } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   const ja = await trenutniKorisnik();
@@ -95,19 +94,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2) Kontrola godišnjeg fonda (godišnji + slobodan dan).
+  // 2) Kontrola godišnjeg fonda — po kalendarskoj godini.
   if (trosiFond(tip as TipOdsustva)) {
     const podnosilac = sviZaposleni.find((z) => z.id === zaposleniId);
-    const iskorisceno = iskorisceniGodisnji(javniZahtevi, zaposleniId);
-    const trazeno = brojRadnihDana(datumOd, datumDo);
-    if (podnosilac && iskorisceno + trazeno > podnosilac.brojDanaGodisnjeg) {
-      const preostalo = podnosilac.brojDanaGodisnjeg - iskorisceno;
-      return NextResponse.json(
-        {
-          greska: `Prekoračen godišnji fond: tražite ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
-        },
-        { status: 409 },
+    if (podnosilac) {
+      const greskaFond = proveriGodisnjiFond(
+        javniZahtevi,
+        podnosilac,
+        datumOd,
+        datumDo,
       );
+      if (greskaFond) {
+        return NextResponse.json({ greska: greskaFond }, { status: 409 });
+      }
     }
   }
 
@@ -117,10 +116,23 @@ export async function POST(req: NextRequest) {
     data: { zaposleniId, tip, datumOd, datumDo, napomena, status },
   });
 
-  // Obavesti šefa (best-effort — ne blokira odgovor pri grešci).
   const podnosilac = sviZaposleni.find((z) => z.id === zaposleniId);
+  const admini = sviZaposleni.filter((z) => z.uloga === "sef" && z.id !== ja.id);
+
+  // In-app notifikacija šefovima (osim nagradnog dana koji admin sam dodaje).
+  if (status === "na_cekanju" && admini.length) {
+    await prisma.notifikacija.createMany({
+      data: admini.map((a) => ({
+        korisnikId: a.id,
+        tekst: `Nov zahtev: ${podnosilac?.ime ?? "Zaposleni"} — ${TIP_LABELE[tip as TipOdsustva]} (${datumOd} – ${datumDo})`,
+        link: "pregled",
+      })),
+    });
+  }
+
+  // Email šefovima (best-effort — uspavano dok nema RESEND_API_KEY).
   await mejlNovZahtev({
-    adminEmails: sviZaposleni.filter((z) => z.uloga === "sef").map((z) => z.email),
+    adminEmails: admini.map((z) => z.email),
     imePodnosioca: podnosilac?.ime ?? "Zaposleni",
     tip: tip as TipOdsustva,
     datumOd,

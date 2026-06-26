@@ -8,6 +8,15 @@ export type TipOdsustva =
 
 export type StatusZahteva = "na_cekanju" | "odobreno" | "odbijeno";
 
+export interface Notifikacija {
+  id: string;
+  korisnikId: string;
+  tekst: string;
+  link?: string | null;
+  procitano: boolean;
+  kreirano: string; // ISO
+}
+
 export type Uloga = "dizajner" | "frontend" | "seo" | "sef" | "ostalo";
 
 export interface Zaposleni {

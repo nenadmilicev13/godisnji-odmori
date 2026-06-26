@@ -8,8 +8,7 @@ import {
 import { jeAdmin, trosiFond, StatusZahteva, TipOdsustva } from "@/lib/types";
 import {
   pronadjiKonfliktDizajnera,
-  zauzetiGodisnji,
-  brojRadnihDana,
+  proveriGodisnjiFond,
 } from "@/lib/utils";
 import { mejlStatus } from "@/lib/email";
 
@@ -85,16 +84,15 @@ export async function PATCH(
 
     if (trosiFond(tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
-      const zauzeto = zauzetiGodisnji(javniZahtevi, zahtev.zaposleniId, zahtev.id);
-      const trazeno = brojRadnihDana(datumOd, datumDo);
-      if (podnosilac && zauzeto + trazeno > podnosilac.brojDanaGodisnjeg) {
-        const preostalo = podnosilac.brojDanaGodisnjeg - zauzeto;
-        return NextResponse.json(
-          {
-            greska: `Prekoračen fond: ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
-          },
-          { status: 409 },
+      if (podnosilac) {
+        const greskaFond = proveriGodisnjiFond(
+          javniZahtevi,
+          podnosilac,
+          datumOd,
+          datumDo,
+          zahtev.id,
         );
+        if (greskaFond) return NextResponse.json({ greska: greskaFond }, { status: 409 });
       }
     }
 
@@ -143,23 +141,18 @@ export async function PATCH(
       );
     }
 
-    // Kontrola godišnjeg fonda pri odobravanju (samo "godisnji").
+    // Kontrola godišnjeg fonda pri odobravanju — po godini.
     if (trosiFond(zahtev.tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
-      const zauzeto = zauzetiGodisnji(
-        sviZahtevi.map(javniZahtev),
-        zahtev.zaposleniId,
-        zahtev.id,
-      );
-      const trazeno = brojRadnihDana(zahtev.datumOd, zahtev.datumDo);
-      if (podnosilac && zauzeto + trazeno > podnosilac.brojDanaGodisnjeg) {
-        const preostalo = podnosilac.brojDanaGodisnjeg - zauzeto;
-        return NextResponse.json(
-          {
-            greska: `Prekoračen godišnji fond: ovaj zahtev je ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
-          },
-          { status: 409 },
+      if (podnosilac) {
+        const greskaFond = proveriGodisnjiFond(
+          sviZahtevi.map(javniZahtev),
+          podnosilac,
+          zahtev.datumOd,
+          zahtev.datumDo,
+          zahtev.id,
         );
+        if (greskaFond) return NextResponse.json({ greska: greskaFond }, { status: 409 });
       }
     }
   }
@@ -169,8 +162,19 @@ export async function PATCH(
     data: { status },
   });
 
-  // Obavesti zaposlenog o ishodu (best-effort).
-  if (status === "odobreno" || status === "odbijeno") {
+  // Obavesti zaposlenog o ishodu (in-app + email).
+  if (
+    (status === "odobreno" || status === "odbijeno") &&
+    azuriran.zaposleniId !== ja.id
+  ) {
+    const odobren = status === "odobreno";
+    await prisma.notifikacija.create({
+      data: {
+        korisnikId: azuriran.zaposleniId,
+        tekst: `Vaš zahtev (${azuriran.datumOd} – ${azuriran.datumDo}) je ${odobren ? "odobren ✅" : "odbijen"}.`,
+        link: "pregled",
+      },
+    });
     const podnosilac = await prisma.zaposleni.findUnique({
       where: { id: azuriran.zaposleniId },
     });
@@ -178,7 +182,7 @@ export async function PATCH(
       await mejlStatus({
         email: podnosilac.email,
         ime: podnosilac.ime,
-        odobreno: status === "odobreno",
+        odobreno: odobren,
         datumOd: azuriran.datumOd,
         datumDo: azuriran.datumDo,
       });

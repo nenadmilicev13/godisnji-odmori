@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { brojRadnihDana, iskorisceniGodisnji } from "@/lib/utils";
+import { brojRadnihDana, iskorisceniGodisnjiUGodini } from "@/lib/utils";
 import { jeAdmin } from "@/lib/types";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/Modal";
@@ -16,6 +16,7 @@ import LoginPage from "@/components/LoginPage";
 import Logo from "@/components/Logo";
 import Korpa from "@/components/Korpa";
 import ToastUndo from "@/components/ToastUndo";
+import Zvonce from "@/components/Zvonce";
 
 type Tab = "pregled" | "kalendar" | "zaposleni" | "korpa";
 
@@ -45,11 +46,16 @@ export default function Home() {
     .filter((z) => z.status === "odobreno")
     .reduce((s, z) => s + brojRadnihDana(z.datumOd, z.datumDo), 0);
 
-  // Lične statistike (radnik).
+  // Lične statistike (radnik) — za tekuću godinu.
+  const tekucaGodina = new Date().getFullYear();
   const moji = zahtevi.filter((z) => z.zaposleniId === trenutniKorisnik.id);
   const mojNaCekanju = moji.filter((z) => z.status === "na_cekanju").length;
   const mojOdobreni = moji.filter((z) => z.status === "odobreno").length;
-  const mojIskorisceni = iskorisceniGodisnji(zahtevi, trenutniKorisnik.id);
+  const mojIskorisceni = iskorisceniGodisnjiUGodini(
+    zahtevi,
+    trenutniKorisnik.id,
+    tekucaGodina,
+  );
   const mojPreostalo = trenutniKorisnik.brojDanaGodisnjeg - mojIskorisceni;
 
   return (
@@ -65,6 +71,7 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <Zvonce />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-medium text-slate-900">
                 {trenutniKorisnik.ime}
@@ -125,7 +132,7 @@ export default function Home() {
           ) : (
             <>
               <StatCard
-                naslov="Preostalo dana"
+                naslov={`Preostalo dana (${tekucaGodina})`}
                 vrednost={mojPreostalo}
                 opis={`od ${trenutniKorisnik.brojDanaGodisnjeg} dana godišnjeg`}
                 ikona={<IkonaKalendar />}
@@ -134,7 +141,7 @@ export default function Home() {
               <StatCard
                 naslov="Iskorišćeno (godišnji)"
                 vrednost={mojIskorisceni}
-                opis="Uneto + odobreno"
+                opis={`${tekucaGodina} · uneto + odobreno`}
                 ikona={<IkonaCek />}
                 boja="rose"
               />

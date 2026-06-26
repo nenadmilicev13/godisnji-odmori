@@ -24,6 +24,19 @@ model Zaposleni {
   slika             String? // profilna slika kao data URL (mali resize)
   kreirano          DateTime @default(now())
   zahtevi           Zahtev[]
+  notifikacije      Notifikacija[]
+}
+
+model Notifikacija {
+  id         String    @id @default(cuid())
+  korisnik   Zaposleni @relation(fields: [korisnikId], references: [id], onDelete: Cascade)
+  korisnikId String
+  tekst      String
+  link       String? // npr. "pregled"
+  procitano  Boolean   @default(false)
+  kreirano   DateTime  @default(now())
+
+  @@index([korisnikId])
 }
 
 model Zahtev {

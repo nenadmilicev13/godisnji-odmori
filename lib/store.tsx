@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Zaposleni, ZahtevZaOdsustvo, StatusZahteva } from "./types";
+import { Zaposleni, ZahtevZaOdsustvo, StatusZahteva, Notifikacija } from "./types";
 
 interface StoreContext {
   zaposleni: Zaposleni[];
@@ -51,6 +51,8 @@ interface StoreContext {
     podaci: { staraLozinka?: string; novaLozinka: string },
   ) => Promise<string | null>;
   obrisiZaposlenog: (id: string) => Promise<string | null>;
+  notifikacije: Notifikacija[];
+  oznaciNotifikacijeProcitane: () => Promise<void>;
 }
 
 const Ctx = createContext<StoreContext | null>(null);
@@ -73,6 +75,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ucitano, setUcitano] = useState(false);
   const [nedavnoObrisan, setNedavnoObrisan] = useState<string | null>(null);
   const undoTajmer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notifikacije, setNotifikacije] = useState<Notifikacija[]>([]);
+
+  const ucitajNotifikacije = useCallback(async () => {
+    const res = await fetch("/api/notifikacije");
+    if (res.ok) setNotifikacije((await res.json()).notifikacije);
+  }, []);
+
+  const oznaciNotifikacijeProcitane = useCallback(async () => {
+    await fetch("/api/notifikacije/procitaj", { method: "POST" });
+    await ucitajNotifikacije();
+  }, [ucitajNotifikacije]);
 
   const ucitajPodatke = useCallback(async () => {
     const [rz, rzh] = await Promise.all([
@@ -90,12 +103,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch("/api/me");
         const korisnik = res.ok ? (await res.json()).korisnik : null;
         setKorisnik(korisnik);
-        if (korisnik) await ucitajPodatke();
+        if (korisnik) await Promise.all([ucitajPodatke(), ucitajNotifikacije()]);
       } finally {
         setUcitano(true);
       }
     })();
-  }, [ucitajPodatke]);
+  }, [ucitajPodatke, ucitajNotifikacije]);
+
+  // Periodično osvežavanje notifikacija (svakih 60s dok je prijavljen).
+  useEffect(() => {
+    if (!trenutniKorisnik) return;
+    const t = setInterval(() => {
+      ucitajNotifikacije();
+    }, 60000);
+    return () => clearInterval(t);
+  }, [trenutniKorisnik, ucitajNotifikacije]);
 
   const prijava = useCallback(
     async (email: string, lozinka: string) => {
@@ -107,10 +129,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const greska = await greskaIz(res);
       if (greska) return greska;
       setKorisnik((await res.json()).korisnik);
-      await ucitajPodatke();
+      await Promise.all([ucitajPodatke(), ucitajNotifikacije()]);
       return null;
     },
-    [ucitajPodatke],
+    [ucitajPodatke, ucitajNotifikacije],
   );
 
   const odjava = useCallback(async () => {
@@ -118,6 +140,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setKorisnik(null);
     setZaposleni([]);
     setZahtevi([]);
+    setNotifikacije([]);
   }, []);
 
   const dodajZahtev = useCallback<StoreContext["dodajZahtev"]>(
@@ -297,6 +320,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       azurirajProfil,
       promeniLozinku,
       obrisiZaposlenog,
+      notifikacije,
+      oznaciNotifikacijeProcitane,
     }),
     [
       zaposleni,
@@ -318,6 +343,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       azurirajProfil,
       promeniLozinku,
       obrisiZaposlenog,
+      notifikacije,
+      oznaciNotifikacijeProcitane,
     ],
   );
 
