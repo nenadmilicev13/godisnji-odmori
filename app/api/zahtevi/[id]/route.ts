@@ -13,18 +13,13 @@ import {
 } from "@/lib/utils";
 import { mejlStatus } from "@/lib/email";
 
-/** Odobravanje/odbijanje — samo admin. */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
   const ja = await trenutniKorisnik();
-  if (!jeAdmin(ja ? javniZaposleni(ja) : null)) {
-    return NextResponse.json(
-      { greska: "Samo admin može da odobrava ili odbija zahteve." },
-      { status: 403 },
-    );
-  }
+  if (!ja) return NextResponse.json({ greska: "Niste prijavljeni." }, { status: 401 });
+  const admin = jeAdmin(javniZaposleni(ja));
 
   const body = await req.json().catch(() => ({}));
 
@@ -33,32 +28,51 @@ export async function PATCH(
     return NextResponse.json({ greska: "Zahtev ne postoji." }, { status: 404 });
   }
 
-  // ——— Pomeranje termina (drag & drop u kalendaru) ———
-  if (body.datumOd && body.datumDo) {
-    const datumOd = String(body.datumOd);
-    const datumDo = String(body.datumDo);
+  // ——— Izmena zahteva (tip/datumi/napomena) — vlasnik ili admin, samo pre odobrenja ———
+  if (typeof body.status !== "string") {
+    const jeVlasnik = zahtev.zaposleniId === ja.id;
+    if (!admin && !jeVlasnik) {
+      return NextResponse.json(
+        { greska: "Možete menjati samo svoj zahtev." },
+        { status: 403 },
+      );
+    }
+    if (zahtev.status !== "na_cekanju") {
+      return NextResponse.json(
+        { greska: "Zahtev je već obrađen i ne može se menjati." },
+        { status: 409 },
+      );
+    }
+
+    const tip = typeof body.tip === "string" ? body.tip : zahtev.tip;
+    const datumOd = typeof body.datumOd === "string" ? body.datumOd : zahtev.datumOd;
+    const datumDo = typeof body.datumDo === "string" ? body.datumDo : zahtev.datumDo;
+    const napomena =
+      typeof body.napomena === "string" ? body.napomena : zahtev.napomena;
+
+    if (tip === "nagradni_dan" && !admin) {
+      return NextResponse.json(
+        { greska: "Nagradni dan može dodeliti samo admin." },
+        { status: 403 },
+      );
+    }
     if (datumOd > datumDo) {
       return NextResponse.json(
         { greska: "Datum „od“ ne može biti posle datuma „do“." },
         { status: 400 },
       );
     }
+
     const [sviZahtevi, sviZaposleni] = await Promise.all([
       prisma.zahtev.findMany(),
       prisma.zaposleni.findMany(),
     ]);
     const javniZahtevi = sviZahtevi.map(javniZahtev);
 
-    // Preklapanje dizajnera za nove datume (protiv neodbijenih, bez ovog zahteva).
     const konflikt = pronadjiKonfliktDizajnera(
       javniZahtevi,
       sviZaposleni.map(javniZaposleni),
-      {
-        zaposleniId: zahtev.zaposleniId,
-        datumOd,
-        datumDo,
-        ignorirajZahtevId: zahtev.id,
-      },
+      { zaposleniId: zahtev.zaposleniId, datumOd, datumDo, ignorirajZahtevId: zahtev.id },
     );
     if (konflikt) {
       return NextResponse.json(
@@ -69,8 +83,7 @@ export async function PATCH(
       );
     }
 
-    // Kontrola fonda (samo "godisnji"), bez ovog zahteva.
-    if (trosiFond(zahtev.tip as TipOdsustva)) {
+    if (trosiFond(tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
       const zauzeto = zauzetiGodisnji(javniZahtevi, zahtev.zaposleniId, zahtev.id);
       const trazeno = brojRadnihDana(datumOd, datumDo);
@@ -78,7 +91,7 @@ export async function PATCH(
         const preostalo = podnosilac.brojDanaGodisnjeg - zauzeto;
         return NextResponse.json(
           {
-            greska: `Prekoračen fond: novi termin je ${trazeno} dana, preostalo ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
+            greska: `Prekoračen fond: ${trazeno} dana, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
           },
           { status: 409 },
         );
@@ -87,12 +100,18 @@ export async function PATCH(
 
     const azuriran = await prisma.zahtev.update({
       where: { id: params.id },
-      data: { datumOd, datumDo },
+      data: { tip, datumOd, datumDo, napomena },
     });
     return NextResponse.json({ zahtev: javniZahtev(azuriran) });
   }
 
-  // ——— Promena statusa (odobri/odbij) ———
+  // ——— Promena statusa (odobri/odbij) — samo admin ———
+  if (!admin) {
+    return NextResponse.json(
+      { greska: "Samo admin može da odobrava ili odbija zahteve." },
+      { status: 403 },
+    );
+  }
   const status = body.status as StatusZahteva;
   if (!["na_cekanju", "odobreno", "odbijeno"].includes(status)) {
     return NextResponse.json({ greska: "Neispravan status." }, { status: 400 });

@@ -27,11 +27,18 @@ export function jeAdmin(z: Zaposleni | null | undefined): boolean {
   return z?.uloga === "sef";
 }
 
-/** Tipovi odsustva koji troše godišnji fond (godišnji = slobodan dan). */
-export const TIPOVI_FONDA: TipOdsustva[] = ["godisnji", "slobodan_dan"];
+/** Tipovi odsustva koji troše godišnji fond. */
+export const TIPOVI_FONDA: TipOdsustva[] = ["godisnji"];
 
 export function trosiFond(tip: TipOdsustva): boolean {
   return TIPOVI_FONDA.includes(tip);
+}
+
+/** Tipovi koje zaposleni može da izabere pri unosu (admin dodatno „nagradni_dan"). */
+export const TIPOVI_ZA_UNOS: TipOdsustva[] = ["godisnji", "bolovanje"];
+
+export function tipoviZaUnos(admin: boolean): TipOdsustva[] {
+  return admin ? [...TIPOVI_ZA_UNOS, "nagradni_dan"] : TIPOVI_ZA_UNOS;
 }
 
 export interface ZahtevZaOdsustvo {

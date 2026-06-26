@@ -5,20 +5,38 @@ import { useStore } from "@/lib/store";
 import {
   StatusZahteva,
   ZahtevZaOdsustvo,
+  TipOdsustva,
   TIP_LABELE,
   STATUS_LABELE,
   jeAdmin,
+  tipoviZaUnos,
 } from "@/lib/types";
 import { brojRadnihDana, formatDatum } from "@/lib/utils";
 import Badge from "./Badge";
+import Modal from "./Modal";
 
 type Filter = "sve" | StatusZahteva;
 
 export default function ZahteviLista() {
-  const { zahtevi, zaposleni, trenutniKorisnik, promeniStatus, obrisiZahtev } =
-    useStore();
+  const {
+    zahtevi,
+    zaposleni,
+    trenutniKorisnik,
+    promeniStatus,
+    izmeniZahtev,
+    obrisiZahtev,
+  } = useStore();
   const [filter, setFilter] = useState<Filter>("sve");
   const [greska, setGreska] = useState("");
+
+  // Izmena (samo dok je „na čekanju")
+  const [izmena, setIzmena] = useState<ZahtevZaOdsustvo | null>(null);
+  const [tip, setTip] = useState<TipOdsustva>("godisnji");
+  const [datumOd, setDatumOd] = useState("");
+  const [datumDo, setDatumDo] = useState("");
+  const [napomena, setNapomena] = useState("");
+  const [cuva, setCuva] = useState(false);
+  const [greskaIzmena, setGreskaIzmena] = useState("");
 
   const admin = jeAdmin(trenutniKorisnik);
 
@@ -33,6 +51,26 @@ export default function ZahteviLista() {
   async function ukloni(z: ZahtevZaOdsustvo) {
     const g = await obrisiZahtev(z.id);
     setGreska(g ?? "");
+  }
+
+  function otvoriIzmenu(z: ZahtevZaOdsustvo) {
+    setIzmena(z);
+    setTip(z.tip);
+    setDatumOd(z.datumOd);
+    setDatumDo(z.datumDo);
+    setNapomena(z.napomena);
+    setGreskaIzmena("");
+  }
+
+  async function sacuvajIzmenu() {
+    if (!izmena) return;
+    if (new Date(datumOd) > new Date(datumDo))
+      return setGreskaIzmena("Datum „od“ ne može biti posle datuma „do“.");
+    setCuva(true);
+    const g = await izmeniZahtev(izmena.id, { tip, datumOd, datumDo, napomena });
+    setCuva(false);
+    if (g) return setGreskaIzmena(g);
+    setIzmena(null);
   }
 
   // Radnik vidi samo svoje zahteve; admin vidi sve.
@@ -136,6 +174,14 @@ export default function ZahteviLista() {
                       Odbij
                     </button>
                   )}
+                  {(admin || mojZahtev) && z.status === "na_cekanju" && (
+                    <button
+                      onClick={() => otvoriIzmenu(z)}
+                      className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-200"
+                    >
+                      Izmeni
+                    </button>
+                  )}
                   {(admin || mojZahtev) && (
                     <button
                       onClick={() => ukloni(z)}
@@ -153,6 +199,85 @@ export default function ZahteviLista() {
           })}
         </div>
       )}
+
+      {/* Izmena zahteva (samo pre odobrenja) */}
+      <Modal
+        otvoren={!!izmena}
+        naslov="Izmena zahteva"
+        onZatvori={() => setIzmena(null)}
+      >
+        {izmena && (
+          <div className="space-y-4">
+            <div>
+              <label className="label">Tip odsustva</label>
+              <select
+                className="input"
+                value={tip}
+                onChange={(e) => setTip(e.target.value as TipOdsustva)}
+              >
+                {tipoviZaUnos(admin).map((k) => (
+                  <option key={k} value={k}>
+                    {TIP_LABELE[k]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Datum od</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={datumOd}
+                  onChange={(e) => setDatumOd(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Datum do</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={datumDo}
+                  min={datumOd}
+                  onChange={(e) => setDatumDo(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="rounded-lg bg-brand-50 px-4 py-2 text-sm text-brand-700">
+              Trajanje:{" "}
+              <span className="font-semibold">
+                {brojRadnihDana(datumOd, datumDo)} radnih dana
+              </span>{" "}
+              <span className="text-brand-400">(bez vikenda i praznika)</span>
+            </div>
+            <div>
+              <label className="label">Napomena</label>
+              <textarea
+                className="input min-h-[70px] resize-y"
+                value={napomena}
+                onChange={(e) => setNapomena(e.target.value)}
+              />
+            </div>
+            {greskaIzmena && (
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">
+                {greskaIzmena}
+              </p>
+            )}
+            <div className="flex justify-end gap-3 pt-1">
+              <button className="btn-ghost" onClick={() => setIzmena(null)}>
+                Otkaži
+              </button>
+              <button
+                className="btn-primary"
+                onClick={sacuvajIzmenu}
+                disabled={cuva}
+              >
+                {cuva ? "Čuvanje..." : "Sačuvaj izmene"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

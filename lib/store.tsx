@@ -21,6 +21,10 @@ interface StoreContext {
     z: Omit<ZahtevZaOdsustvo, "id" | "kreirano" | "status">,
   ) => Promise<string | null>;
   promeniStatus: (id: string, status: StatusZahteva) => Promise<string | null>;
+  izmeniZahtev: (
+    id: string,
+    podaci: Partial<Pick<ZahtevZaOdsustvo, "tip" | "datumOd" | "datumDo" | "napomena">>,
+  ) => Promise<string | null>;
   pomeriZahtev: (
     id: string,
     datumOd: string,
@@ -134,6 +138,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [ucitajPodatke],
   );
 
+  const izmeniZahtev = useCallback<StoreContext["izmeniZahtev"]>(
+    async (id, podaci) => {
+      const res = await fetch(`/api/zahtevi/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(podaci),
+      });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
   const pomeriZahtev = useCallback<StoreContext["pomeriZahtev"]>(
     async (id, datumOd, datumDo) => {
       const res = await fetch(`/api/zahtevi/${id}`, {
@@ -223,6 +242,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       odjava,
       dodajZahtev,
       promeniStatus,
+      izmeniZahtev,
       pomeriZahtev,
       obrisiZahtev,
       dodajZaposlenog,
@@ -239,6 +259,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       odjava,
       dodajZahtev,
       promeniStatus,
+      izmeniZahtev,
       pomeriZahtev,
       obrisiZahtev,
       dodajZaposlenog,

@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { TipOdsustva, TIP_LABELE, jeAdmin, trosiFond } from "@/lib/types";
+import {
+  TipOdsustva,
+  TIP_LABELE,
+  jeAdmin,
+  trosiFond,
+  tipoviZaUnos,
+} from "@/lib/types";
 import { brojRadnihDana, danas, iskorisceniGodisnji } from "@/lib/utils";
 
 interface Props {
@@ -78,13 +84,11 @@ export default function ZahtevForma({ onGotovo }: Props) {
           value={tip}
           onChange={(e) => setTip(e.target.value as TipOdsustva)}
         >
-          {Object.entries(TIP_LABELE)
-            .filter(([k]) => admin || k !== "nagradni_dan")
-            .map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
+          {tipoviZaUnos(admin).map((k) => (
+            <option key={k} value={k}>
+              {TIP_LABELE[k]}
+            </option>
+          ))}
         </select>
       </div>
 

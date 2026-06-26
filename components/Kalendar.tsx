@@ -103,9 +103,10 @@ export default function Kalendar() {
     pan.current.active = false;
   }
 
-  function trakaDown(e: React.PointerEvent, r: { id: string; datumOd: string; datumDo: string }) {
+  function trakaDown(e: React.PointerEvent, r: ZahtevZaOdsustvo) {
     e.stopPropagation(); // ne pokreći pan kad se dira traka
     if (!admin) return; // ne-admin samo klik (pregled), bez prevlačenja
+    if (r.status !== "na_cekanju") return; // odobreno/odbijeno se ne pomera
     e.preventDefault();
     pomeranoRef.current = false;
     dragRef.current = { id: r.id, startX: e.clientX, datumOd: r.datumOd, datumDo: r.datumDo };
