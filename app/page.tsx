@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { brojRadnihDana } from "@/lib/utils";
+import { brojRadnihDana, iskorisceniGodisnji } from "@/lib/utils";
 import { jeAdmin } from "@/lib/types";
 import StatCard from "@/components/StatCard";
 import Modal from "@/components/Modal";
@@ -34,11 +34,19 @@ export default function Home() {
 
   const admin = jeAdmin(trenutniKorisnik);
 
+  // Timske statistike (admin).
   const naCekanju = zahtevi.filter((z) => z.status === "na_cekanju").length;
   const odobreno = zahtevi.filter((z) => z.status === "odobreno").length;
   const ukupnoDana = zahtevi
     .filter((z) => z.status === "odobreno")
     .reduce((s, z) => s + brojRadnihDana(z.datumOd, z.datumDo), 0);
+
+  // Lične statistike (radnik).
+  const moji = zahtevi.filter((z) => z.zaposleniId === trenutniKorisnik.id);
+  const mojNaCekanju = moji.filter((z) => z.status === "na_cekanju").length;
+  const mojOdobreni = moji.filter((z) => z.status === "odobreno").length;
+  const mojIskorisceni = iskorisceniGodisnji(zahtevi, trenutniKorisnik.id);
+  const mojPreostalo = trenutniKorisnik.brojDanaGodisnjeg - mojIskorisceni;
 
   return (
     <div className="min-h-screen">
@@ -86,32 +94,66 @@ export default function Home() {
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Statistika */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            naslov="Zaposlenih"
-            vrednost={zaposleni.length}
-            ikona={<IkonaLjudi />}
-            boja="brand"
-          />
-          <StatCard
-            naslov="Zahteva na čekanju"
-            vrednost={naCekanju}
-            opis="Čeka odobrenje"
-            ikona={<IkonaSat />}
-            boja="amber"
-          />
-          <StatCard
-            naslov="Odobrenih zahteva"
-            vrednost={odobreno}
-            ikona={<IkonaCek />}
-            boja="emerald"
-          />
-          <StatCard
-            naslov="Iskorišćeno dana"
-            vrednost={ukupnoDana}
-            opis="Ukupno odobreno"
-            ikona={<IkonaKalendar />}
-            boja="rose"
-          />
+          {admin ? (
+            <>
+              <StatCard
+                naslov="Zaposlenih"
+                vrednost={zaposleni.length}
+                ikona={<IkonaLjudi />}
+                boja="brand"
+              />
+              <StatCard
+                naslov="Zahteva na čekanju"
+                vrednost={naCekanju}
+                opis="Čeka odobrenje"
+                ikona={<IkonaSat />}
+                boja="amber"
+              />
+              <StatCard
+                naslov="Odobrenih zahteva"
+                vrednost={odobreno}
+                ikona={<IkonaCek />}
+                boja="emerald"
+              />
+              <StatCard
+                naslov="Iskorišćeno dana"
+                vrednost={ukupnoDana}
+                opis="Ceo tim, odobreno"
+                ikona={<IkonaKalendar />}
+                boja="rose"
+              />
+            </>
+          ) : (
+            <>
+              <StatCard
+                naslov="Preostalo dana"
+                vrednost={mojPreostalo}
+                opis={`od ${trenutniKorisnik.brojDanaGodisnjeg} dana godišnjeg`}
+                ikona={<IkonaKalendar />}
+                boja="brand"
+              />
+              <StatCard
+                naslov="Iskorišćeno (godišnji)"
+                vrednost={mojIskorisceni}
+                opis="Odobreno"
+                ikona={<IkonaCek />}
+                boja="rose"
+              />
+              <StatCard
+                naslov="Moji na čekanju"
+                vrednost={mojNaCekanju}
+                opis="Čeka odobrenje"
+                ikona={<IkonaSat />}
+                boja="amber"
+              />
+              <StatCard
+                naslov="Moji odobreni"
+                vrednost={mojOdobreni}
+                ikona={<IkonaCek />}
+                boja="emerald"
+              />
+            </>
+          )}
         </div>
 
         {/* Ko je odsutan */}

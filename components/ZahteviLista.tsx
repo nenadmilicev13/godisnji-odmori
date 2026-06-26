@@ -35,8 +35,13 @@ export default function ZahteviLista() {
     setGreska(g ?? "");
   }
 
+  // Radnik vidi samo svoje zahteve; admin vidi sve.
+  const vidljivi = admin
+    ? zahtevi
+    : zahtevi.filter((z) => z.zaposleniId === trenutniKorisnik?.id);
+
   const filtrirani =
-    filter === "sve" ? zahtevi : zahtevi.filter((z) => z.status === filter);
+    filter === "sve" ? vidljivi : vidljivi.filter((z) => z.status === filter);
 
   const filteri: Filter[] = ["sve", "na_cekanju", "odobreno", "odbijeno"];
 
