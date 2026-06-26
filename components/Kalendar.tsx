@@ -190,6 +190,27 @@ export default function Kalendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Markeri za godišnje ponavljajuće datume (rođendan/slava) kroz ceo opseg.
+  const prvaGodina = Number(pocetakIso.slice(0, 4));
+  const zadnjaGodina = Number(krajIso.slice(0, 4));
+  function ponavljajuciMarkeri(datum: string | null | undefined, emoji: string, naziv: string) {
+    if (!datum) return [];
+    const mmdd = datum.slice(5); // "mm-dd"
+    const rez: { levo: number; emoji: string; naslov: string }[] = [];
+    for (let g = prvaGodina; g <= zadnjaGodina; g++) {
+      const isoD = `${g}-${mmdd}`;
+      const off = razlikaDana(pocetakIso, isoD);
+      if (off >= 0 && off < brojDana) {
+        rez.push({
+          levo: off * SIRINA_DANA,
+          emoji,
+          naslov: `${naziv}: ${mmdd.slice(3)}.${mmdd.slice(0, 2)}.`,
+        });
+      }
+    }
+    return rez;
+  }
+
   const filtriraniZaposleni = zaposleni.filter((z) =>
     z.ime.toLowerCase().includes(pretraga.trim().toLowerCase()),
   );
@@ -351,6 +372,10 @@ export default function Kalendar() {
           ) : (
             filtriraniZaposleni.map((z, idx) => {
               const inicijali = z.ime.split(" ").map((d) => d[0]).slice(0, 2).join("");
+              const markeri = [
+                ...ponavljajuciMarkeri(z.rodjendan, "🎂", "Rođendan"),
+                ...ponavljajuciMarkeri(z.slava, "🕯️", "Slava"),
+              ];
               const trake = zahtevi
                 .filter((r) => r.zaposleniId === z.id)
                 .filter((r) => statusFilter === "sve" || r.status === statusFilter)
@@ -403,6 +428,18 @@ export default function Kalendar() {
                   >
                     {/* Tint za vikend/praznik (deljeni sloj) */}
                     {tintSloj}
+
+                    {/* Markeri: rođendan / slava */}
+                    {markeri.map((mk, i) => (
+                      <span
+                        key={i}
+                        title={mk.naslov}
+                        className="pointer-events-none absolute top-0 z-10 text-center text-[11px] leading-none"
+                        style={{ left: mk.levo, width: SIRINA_DANA, paddingTop: 1 }}
+                      >
+                        {mk.emoji}
+                      </span>
+                    ))}
 
                     {/* Trake odsustva */}
                     {trake.map((t) => {

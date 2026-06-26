@@ -165,11 +165,11 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
               />
             </div>
             <div>
-              <label className="label">🕯️ Slava</label>
+              <label className="label">🕯️ Slava (datum)</label>
               <input
+                type="date"
                 className="input"
                 value={slava}
-                placeholder="npr. Sveti Nikola (19.12.)"
                 onChange={(e) => setSlava(e.target.value)}
               />
             </div>
@@ -202,7 +202,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             </div>
             <div>
               <p className="text-xs text-slate-400">🕯️ Slava</p>
-              <p className="font-medium text-slate-700">{slava || z.slava || "—"}</p>
+              <p className="font-medium text-slate-700">{formatDanMesec(slava || z.slava)}</p>
             </div>
           </div>
         )}
