@@ -8,8 +8,8 @@ const tim = [
   { ime: "Marko Mijatov", pozicija: "Dizajner", email: "marko.mijatov@firma.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Milan Kujundžić", pozicija: "Dizajner", email: "milan.kujundzic@firma.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Boris Šimunek", pozicija: "Dizajner", email: "boris.simunek@firma.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
-  { ime: "Vladan Katjez", pozicija: "Dizajner", email: "vladan.katjez@firma.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
-  { ime: "Nenad Miličev", pozicija: "Full stack developer", email: "nenad.milicev@firma.rs", uloga: "frontend", lozinka: "123456", brojDanaGodisnjeg: 20 },
+  { ime: "Vladan Kajtez", pozicija: "Dizajner", email: "vladan.katjez@firma.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
+  { ime: "Nenad Milićev", pozicija: "Full stack developer", email: "nenad.milicev@firma.rs", uloga: "frontend", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Ognen Đurasinović", pozicija: "SEO specijalista", email: "ognen.djurasinovic@firma.rs", uloga: "seo", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Sava Marinković", pozicija: "Šef", email: "sava.marinkovic@firma.rs", uloga: "sef", lozinka: "admin123", brojDanaGodisnjeg: 25 },
 ];
