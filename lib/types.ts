@@ -3,7 +3,8 @@ export type TipOdsustva =
   | "bolovanje"
   | "slobodan_dan"
   | "placeno_odsustvo"
-  | "neplaceno_odsustvo";
+  | "neplaceno_odsustvo"
+  | "nagradni_dan";
 
 export type StatusZahteva = "na_cekanju" | "odobreno" | "odbijeno";
 
@@ -50,6 +51,7 @@ export const TIP_LABELE: Record<TipOdsustva, string> = {
   slobodan_dan: "Slobodan dan",
   placeno_odsustvo: "Plaćeno odsustvo",
   neplaceno_odsustvo: "Neplaćeno odsustvo",
+  nagradni_dan: "Nagradni dan 🎁",
 };
 
 export const STATUS_LABELE: Record<StatusZahteva, string> = {

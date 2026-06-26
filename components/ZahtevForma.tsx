@@ -78,11 +78,13 @@ export default function ZahtevForma({ onGotovo }: Props) {
           value={tip}
           onChange={(e) => setTip(e.target.value as TipOdsustva)}
         >
-          {Object.entries(TIP_LABELE).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
+          {Object.entries(TIP_LABELE)
+            .filter(([k]) => admin || k !== "nagradni_dan")
+            .map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
         </select>
       </div>
 

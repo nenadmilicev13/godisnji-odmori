@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     );
   }
+  // Nagradni dan može dodeliti samo admin.
+  if (tip === "nagradni_dan" && !admin) {
+    return NextResponse.json(
+      { greska: "Nagradni dan može dodeliti samo admin." },
+      { status: 403 },
+    );
+  }
   if (!zaposleniId || !datumOd || !datumDo) {
     return NextResponse.json({ greska: "Nedostaju podaci." }, { status: 400 });
   }
@@ -88,8 +95,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Nagradni dan koji dodeljuje admin je odmah odobren.
+  const status = admin && tip === "nagradni_dan" ? "odobreno" : "na_cekanju";
   const noviz = await prisma.zahtev.create({
-    data: { zaposleniId, tip, datumOd, datumDo, napomena, status: "na_cekanju" },
+    data: { zaposleniId, tip, datumOd, datumDo, napomena, status },
   });
 
   // Obavesti šefa (best-effort — ne blokira odgovor pri grešci).
