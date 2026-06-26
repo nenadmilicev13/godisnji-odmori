@@ -16,6 +16,8 @@ type ZaposleniRed = {
   email: string;
   uloga: string;
   brojDanaGodisnjeg: number;
+  rodjendan?: string | null;
+  slava?: string | null;
   lozinkaHash?: string;
 };
 
@@ -28,6 +30,8 @@ export function javniZaposleni(z: ZaposleniRed): Zaposleni {
     email: z.email,
     uloga: z.uloga as Zaposleni["uloga"],
     brojDanaGodisnjeg: z.brojDanaGodisnjeg,
+    rodjendan: z.rodjendan ?? null,
+    slava: z.slava ?? null,
   };
 }
 

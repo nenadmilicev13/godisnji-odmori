@@ -17,6 +17,8 @@ export interface Zaposleni {
   uloga: Uloga;
   lozinka?: string; // klijentski demo-login (nije prava sigurnost)
   brojDanaGodisnjeg: number; // ukupan godišnji fond dana
+  rodjendan?: string | null; // yyyy-mm-dd
+  slava?: string | null;
 }
 
 /** Admin (šef) je jedini koji može da odobrava/odbija zahteve. */

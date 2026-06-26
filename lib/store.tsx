@@ -28,6 +28,10 @@ interface StoreContext {
   ) => Promise<string | null>;
   obrisiZahtev: (id: string) => Promise<string | null>;
   dodajZaposlenog: (z: Omit<Zaposleni, "id">) => Promise<string | null>;
+  azurirajProfil: (
+    id: string,
+    podaci: { rodjendan: string | null; slava: string | null },
+  ) => Promise<string | null>;
   obrisiZaposlenog: (id: string) => Promise<string | null>;
 }
 
@@ -167,6 +171,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [ucitajPodatke],
   );
 
+  const azurirajProfil = useCallback<StoreContext["azurirajProfil"]>(
+    async (id, podaci) => {
+      const res = await fetch(`/api/zaposleni/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(podaci),
+      });
+      const greska = await greskaIz(res);
+      if (greska) return greska;
+      await ucitajPodatke();
+      return null;
+    },
+    [ucitajPodatke],
+  );
+
   const obrisiZaposlenog = useCallback<StoreContext["obrisiZaposlenog"]>(
     async (id) => {
       const res = await fetch(`/api/zaposleni/${id}`, { method: "DELETE" });
@@ -191,6 +210,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       pomeriZahtev,
       obrisiZahtev,
       dodajZaposlenog,
+      azurirajProfil,
       obrisiZaposlenog,
     }),
     [
@@ -205,6 +225,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       pomeriZahtev,
       obrisiZahtev,
       dodajZaposlenog,
+      azurirajProfil,
       obrisiZaposlenog,
     ],
   );

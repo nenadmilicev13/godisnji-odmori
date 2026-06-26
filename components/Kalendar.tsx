@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { StatusZahteva, STATUS_LABELE, TIP_LABELE, jeAdmin } from "@/lib/types";
 import { brojRadnihDana } from "@/lib/utils";
@@ -8,7 +8,7 @@ import { nazivPraznika } from "@/lib/praznici";
 
 const LEVO = 208; // širina leve kolone (zaposleni)
 const SIRINA_DANA = 40; // px po danu
-const BROJ_DANA = 35; // koliko dana se prikazuje u prozoru
+const GODINA_UNAPRED = 3; // koliko godina unapred ide osa (npr. 2026 -> kraj 2029)
 const VISINA_REDA = 56;
 
 const MESECI = [
@@ -110,43 +110,91 @@ export default function Kalendar() {
     setPoruka(greska ?? "");
   }
 
-  // Početak prozora: 6 dana pre danas.
-  const [pocetakIso, setPocetakIso] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    return iso(d);
-  });
   const [pretraga, setPretraga] = useState("");
   const [statusFilter, setStatusFilter] = useState<"sve" | StatusZahteva>("sve");
 
-  // Niz dana u prozoru.
+  // Fiksni opseg ose: od 14 dana pre danas do kraja (tekuća godina + N).
+  const pocetakIso = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return iso(d);
+  }, []);
+  const krajIso = useMemo(() => {
+    const g = new Date().getFullYear() + GODINA_UNAPRED;
+    return `${g}-12-31`;
+  }, []);
+  const brojDana = razlikaDana(pocetakIso, krajIso) + 1;
+
+  // Svi dani u opsegu.
   const dani = useMemo(() => {
     const start = parseIso(pocetakIso);
-    return Array.from({ length: BROJ_DANA }, (_, i) => {
+    return Array.from({ length: brojDana }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
     });
-  }, [pocetakIso]);
+  }, [pocetakIso, brojDana]);
 
+  // Skroluj na poziciju (dani od početka), centriraj malo pre.
+  function skrolujNa(daniOdPocetka: number) {
+    if (skrolRef.current)
+      skrolRef.current.scrollLeft = Math.max(0, (daniOdPocetka - 4) * SIRINA_DANA);
+  }
   function pomeri(delta: number) {
-    const d = parseIso(pocetakIso);
-    d.setDate(d.getDate() + delta);
-    setPocetakIso(iso(d));
+    if (skrolRef.current) skrolRef.current.scrollLeft += delta * SIRINA_DANA;
   }
   function naDanas() {
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    setPocetakIso(iso(d));
+    skrolujNa(razlikaDana(pocetakIso, danasIso));
   }
+
+  // Na prvom prikazu skroluj na danas.
+  useEffect(() => {
+    skrolujNa(razlikaDana(pocetakIso, danasIso));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtriraniZaposleni = zaposleni.filter((z) =>
     z.ime.toLowerCase().includes(pretraga.trim().toLowerCase()),
   );
 
-  const sirinaOse = BROJ_DANA * SIRINA_DANA;
+  const sirinaOse = brojDana * SIRINA_DANA;
 
-  // Oznake meseca: gde u prozoru počinje novi mesec (ili prvi dan).
+  // Meta podaci po danu (računaju se jednom, ne pri svakom drag pomeranju).
+  const daniMeta = useMemo(
+    () =>
+      dani.map((d) => {
+        const dan = d.getDay();
+        const isoD = iso(d);
+        return {
+          broj: d.getDate(),
+          weekend: dan === 0 || dan === 6,
+          praznik: !!nazivPraznika(isoD),
+          jeDanas: isoD === danasIso,
+        };
+      }),
+    [dani, danasIso],
+  );
+
+  // Pozadinski sloj (vikend/praznik) — isti za sve redove, gradi se jednom.
+  const tintSloj = useMemo(
+    () =>
+      daniMeta.map((m, i) =>
+        m.weekend || m.praznik ? (
+          <div
+            key={i}
+            className={
+              m.praznik
+                ? "absolute top-0 h-full bg-amber-50"
+                : "absolute top-0 h-full bg-slate-50"
+            }
+            style={{ left: i * SIRINA_DANA, width: SIRINA_DANA }}
+          />
+        ) : null,
+      ),
+    [daniMeta],
+  );
+
+  // Oznake meseca: gde u opsegu počinje novi mesec (ili prvi dan).
   const oznakeMeseca = dani
     .map((d, i) => ({ d, i }))
     .filter(({ d, i }) => i === 0 || d.getDate() === 1)
@@ -238,29 +286,23 @@ export default function Kalendar() {
                 className="sticky left-0 z-10 shrink-0 bg-white"
                 style={{ width: LEVO }}
               />
-              {dani.map((d, i) => {
-                const dan = d.getDay();
-                const vikend = dan === 0 || dan === 6;
-                const praznik = !!nazivPraznika(iso(d));
-                const jeDanas = iso(d) === danasIso;
-                return (
-                  <div
-                    key={i}
-                    className={`shrink-0 py-1 text-center text-xs ${
-                      vikend || praznik ? "bg-slate-50 text-slate-400" : "text-slate-500"
-                    }`}
-                    style={{ width: SIRINA_DANA }}
+              {daniMeta.map((m, i) => (
+                <div
+                  key={i}
+                  className={`shrink-0 py-1 text-center text-xs ${
+                    m.weekend || m.praznik ? "bg-slate-50 text-slate-400" : "text-slate-500"
+                  }`}
+                  style={{ width: SIRINA_DANA }}
+                >
+                  <span
+                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
+                      m.jeDanas ? "bg-brand-600 font-semibold text-white" : ""
+                    } ${m.praznik && !m.jeDanas ? "text-amber-500" : ""}`}
                   >
-                    <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${
-                        jeDanas ? "bg-brand-600 font-semibold text-white" : ""
-                      } ${praznik && !jeDanas ? "text-amber-500" : ""}`}
-                    >
-                      {d.getDate()}
-                    </span>
-                  </div>
-                );
-              })}
+                    {m.broj}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -278,10 +320,10 @@ export default function Kalendar() {
                 .map((r) => {
                   const start = Math.max(0, razlikaDana(pocetakIso, r.datumOd));
                   const krajExcl = Math.min(
-                    BROJ_DANA,
+                    brojDana,
                     razlikaDana(pocetakIso, r.datumDo) + 1,
                   );
-                  if (krajExcl <= 0 || start >= BROJ_DANA || krajExcl <= start)
+                  if (krajExcl <= 0 || start >= brojDana || krajExcl <= start)
                     return null;
                   return {
                     r,
@@ -322,20 +364,8 @@ export default function Kalendar() {
                       backgroundImage: `repeating-linear-gradient(to right, transparent, transparent ${SIRINA_DANA - 1}px, #f1f5f9 ${SIRINA_DANA - 1}px, #f1f5f9 ${SIRINA_DANA}px)`,
                     }}
                   >
-                    {/* Tint za vikend/praznik */}
-                    {dani.map((d, i) => {
-                      const dan = d.getDay();
-                      const vikend = dan === 0 || dan === 6;
-                      const praznik = !!nazivPraznika(iso(d));
-                      if (!vikend && !praznik) return null;
-                      return (
-                        <div
-                          key={i}
-                          className={praznik ? "absolute top-0 h-full bg-amber-50" : "absolute top-0 h-full bg-slate-50"}
-                          style={{ left: i * SIRINA_DANA, width: SIRINA_DANA }}
-                        />
-                      );
-                    })}
+                    {/* Tint za vikend/praznik (deljeni sloj) */}
+                    {tintSloj}
 
                     {/* Trake odsustva */}
                     {trake.map((t) => {

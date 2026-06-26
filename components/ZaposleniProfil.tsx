@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   Zaposleni,
   TipOdsustva,
   TIP_LABELE,
   ULOGA_LABELE,
+  jeAdmin,
 } from "@/lib/types";
 import { brojRadnihDana, formatDatum, iskorisceniGodisnji } from "@/lib/utils";
 import Badge from "./Badge";
@@ -14,8 +16,35 @@ interface Props {
   zaposleni: Zaposleni;
 }
 
+/** Prikaz rođendana bez godine: dd.mm. */
+function formatDanMesec(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const [, m, d] = iso.split("-");
+  if (!m || !d) return iso;
+  return `${d}.${m}.`;
+}
+
 export default function ZaposleniProfil({ zaposleni: z }: Props) {
-  const { zahtevi } = useStore();
+  const { zahtevi, trenutniKorisnik, azurirajProfil } = useStore();
+
+  const mogeIzmena = jeAdmin(trenutniKorisnik) || trenutniKorisnik?.id === z.id;
+  const [izmena, setIzmena] = useState(false);
+  const [rodjendan, setRodjendan] = useState(z.rodjendan ?? "");
+  const [slava, setSlava] = useState(z.slava ?? "");
+  const [cuva, setCuva] = useState(false);
+  const [greska, setGreska] = useState("");
+
+  async function sacuvaj() {
+    setCuva(true);
+    const g = await azurirajProfil(z.id, {
+      rodjendan: rodjendan || null,
+      slava: slava.trim() || null,
+    });
+    setCuva(false);
+    if (g) return setGreska(g);
+    setGreska("");
+    setIzmena(false);
+  }
 
   const moji = zahtevi
     .filter((r) => r.zaposleniId === z.id)
@@ -64,6 +93,74 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             <span className="text-xs text-slate-400">{z.email}</span>
           </div>
         </div>
+      </div>
+
+      {/* Rođendan i slava */}
+      <div className="rounded-xl border border-slate-200 p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-slate-700">Lični datumi</h4>
+          {mogeIzmena && !izmena && (
+            <button
+              onClick={() => setIzmena(true)}
+              className="text-xs font-medium text-brand-600 hover:text-brand-700"
+            >
+              Izmeni
+            </button>
+          )}
+        </div>
+
+        {izmena ? (
+          <div className="space-y-3">
+            <div>
+              <label className="label">🎂 Rođendan</label>
+              <input
+                type="date"
+                className="input"
+                value={rodjendan}
+                onChange={(e) => setRodjendan(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">🕯️ Slava</label>
+              <input
+                className="input"
+                value={slava}
+                placeholder="npr. Sveti Nikola (19.12.)"
+                onChange={(e) => setSlava(e.target.value)}
+              />
+            </div>
+            {greska && (
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{greska}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                className="btn-ghost px-3 py-1.5 text-sm"
+                onClick={() => {
+                  setIzmena(false);
+                  setRodjendan(z.rodjendan ?? "");
+                  setSlava(z.slava ?? "");
+                  setGreska("");
+                }}
+              >
+                Otkaži
+              </button>
+              <button className="btn-primary px-3 py-1.5 text-sm" onClick={sacuvaj} disabled={cuva}>
+                {cuva ? "Čuvanje..." : "Sačuvaj"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-slate-400">🎂 Rođendan</p>
+              <p className="font-medium text-slate-700">{formatDanMesec(rodjendan || z.rodjendan)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-400">🕯️ Slava</p>
+              <p className="font-medium text-slate-700">{slava || z.slava || "—"}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Godišnji fond */}

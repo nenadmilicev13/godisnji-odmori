@@ -19,6 +19,8 @@ model Zaposleni {
   uloga             String // dizajner | frontend | seo | sef | ostalo
   lozinkaHash       String
   brojDanaGodisnjeg Int      @default(20)
+  rodjendan         String? // yyyy-mm-dd (godina nebitna)
+  slava             String? // npr. "Sveti Nikola (19.12.)"
   kreirano          DateTime @default(now())
   zahtevi           Zahtev[]
 }
