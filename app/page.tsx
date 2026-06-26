@@ -11,6 +11,7 @@ import ZahteviLista from "@/components/ZahteviLista";
 import ZaposleniLista from "@/components/ZaposleniLista";
 import Kalendar from "@/components/Kalendar";
 import KoJeOdsutan from "@/components/KoJeOdsutan";
+import RodjendaniSlave from "@/components/RodjendaniSlave";
 import LoginPage from "@/components/LoginPage";
 
 type Tab = "pregled" | "kalendar" | "zaposleni";
@@ -158,6 +159,9 @@ export default function Home() {
 
         {/* Ko je odsutan */}
         <KoJeOdsutan />
+
+        {/* Rođendani i slave */}
+        <RodjendaniSlave />
 
         {/* Tabovi */}
         <div className="mb-6 flex gap-1 rounded-xl bg-slate-100 p-1">

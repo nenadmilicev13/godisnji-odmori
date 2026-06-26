@@ -2,9 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { StatusZahteva, STATUS_LABELE, TIP_LABELE, jeAdmin } from "@/lib/types";
-import { brojRadnihDana } from "@/lib/utils";
+import {
+  StatusZahteva,
+  ZahtevZaOdsustvo,
+  STATUS_LABELE,
+  TIP_LABELE,
+  jeAdmin,
+} from "@/lib/types";
+import { brojRadnihDana, formatDatum } from "@/lib/utils";
 import { nazivPraznika } from "@/lib/praznici";
+import Modal from "./Modal";
+import Badge from "./Badge";
 
 const LEVO = 208; // širina leve kolone (zaposleni)
 const SIRINA_DANA = 40; // px po danu
@@ -53,9 +61,19 @@ function pomeriIso(s: string, n: number): string {
 }
 
 export default function Kalendar() {
-  const { zaposleni, zahtevi, trenutniKorisnik, pomeriZahtev } = useStore();
+  const {
+    zaposleni,
+    zahtevi,
+    trenutniKorisnik,
+    pomeriZahtev,
+    promeniStatus,
+    obrisiZahtev,
+  } = useStore();
   const admin = jeAdmin(trenutniKorisnik);
   const danasIso = iso(new Date());
+
+  const imeZaposlenog = (id: string) =>
+    zaposleni.find((z) => z.id === id)?.ime ?? "Nepoznat";
 
   // Pan (prevlačenje cele ose mišem).
   const skrolRef = useRef<HTMLDivElement>(null);
@@ -63,9 +81,13 @@ export default function Kalendar() {
 
   // Prevlačenje trake (admin) za promenu termina.
   const dragRef = useRef<{ id: string; startX: number; datumOd: string; datumDo: string } | null>(null);
+  const pomeranoRef = useRef(false);
   const [drag, setDrag] = useState<{ id: string; pomak: number } | null>(null);
   const [poruka, setPoruka] = useState("");
   const [cuva, setCuva] = useState(false);
+
+  // Brzi pregled zahteva (klik na traku).
+  const [detalj, setDetalj] = useState<ZahtevZaOdsustvo | null>(null);
 
   function panDown(e: React.PointerEvent) {
     const el = skrolRef.current;
@@ -82,9 +104,10 @@ export default function Kalendar() {
   }
 
   function trakaDown(e: React.PointerEvent, r: { id: string; datumOd: string; datumDo: string }) {
-    if (!admin) return;
-    e.stopPropagation();
+    e.stopPropagation(); // ne pokreći pan kad se dira traka
+    if (!admin) return; // ne-admin samo klik (pregled), bez prevlačenja
     e.preventDefault();
+    pomeranoRef.current = false;
     dragRef.current = { id: r.id, startX: e.clientX, datumOd: r.datumOd, datumDo: r.datumDo };
     setDrag({ id: r.id, pomak: 0 });
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -92,6 +115,7 @@ export default function Kalendar() {
   function trakaMove(e: React.PointerEvent) {
     if (!dragRef.current) return;
     const dani = Math.round((e.clientX - dragRef.current.startX) / SIRINA_DANA);
+    if (dani !== 0) pomeranoRef.current = true;
     setDrag({ id: dragRef.current.id, pomak: dani });
   }
   async function trakaUp() {
@@ -107,6 +131,19 @@ export default function Kalendar() {
       pomeriIso(d.datumDo, trenutniPomak),
     );
     setCuva(false);
+    setPoruka(greska ?? "");
+  }
+  function trakaKlik(r: ZahtevZaOdsustvo) {
+    // Ako je bilo prevlačenja, ne otvaraj pregled.
+    if (pomeranoRef.current) {
+      pomeranoRef.current = false;
+      return;
+    }
+    setDetalj(r);
+  }
+  async function akcija(fn: () => Promise<string | null>) {
+    const greska = await fn();
+    setDetalj(null);
     setPoruka(greska ?? "");
   }
 
@@ -377,8 +414,9 @@ export default function Kalendar() {
                           onPointerDown={(e) => trakaDown(e, t.r)}
                           onPointerMove={trakaMove}
                           onPointerUp={trakaUp}
-                          title={`${TIP_LABELE[t.r.tip]} · ${t.r.datumOd} – ${t.r.datumDo} · ${STATUS_LABELE[t.r.status]}${admin ? " · prevuci za novi termin" : ""}`}
-                          className={`absolute top-1/2 flex items-center overflow-hidden rounded-md px-2 text-xs font-medium text-white shadow-sm ${BOJA_STATUSA[t.r.status]} ${admin ? "cursor-grab active:cursor-grabbing" : ""} ${seVuce ? "z-20 opacity-90 ring-2 ring-white" : ""} ${cuva && seVuce ? "animate-pulse" : ""}`}
+                          onClick={() => trakaKlik(t.r)}
+                          title={`${TIP_LABELE[t.r.tip]} · ${t.r.datumOd} – ${t.r.datumDo} · ${STATUS_LABELE[t.r.status]} · klik za detalje${admin ? ", prevuci za novi termin" : ""}`}
+                          className={`absolute top-1/2 flex cursor-pointer items-center overflow-hidden rounded-md px-2 text-xs font-medium text-white shadow-sm ${BOJA_STATUSA[t.r.status]} ${admin ? "active:cursor-grabbing" : ""} ${seVuce ? "z-20 opacity-90 ring-2 ring-white" : ""} ${cuva && seVuce ? "animate-pulse" : ""}`}
                           style={{
                             left: t.levo + 2,
                             width: Math.max(0, t.sirina - 4),
@@ -398,6 +436,68 @@ export default function Kalendar() {
           )}
         </div>
       </div>
+
+      {/* Brzi pregled zahteva */}
+      <Modal
+        otvoren={!!detalj}
+        naslov="Zahtev za odsustvo"
+        onZatvori={() => setDetalj(null)}
+      >
+        {detalj && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-900">
+                {imeZaposlenog(detalj.zaposleniId)}
+              </span>
+              <Badge status={detalj.status} />
+            </div>
+            <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+              <p>
+                <span className="text-slate-400">Tip:</span>{" "}
+                {TIP_LABELE[detalj.tip]}
+              </p>
+              <p>
+                <span className="text-slate-400">Period:</span>{" "}
+                {formatDatum(detalj.datumOd)} – {formatDatum(detalj.datumDo)}
+              </p>
+              <p>
+                <span className="text-slate-400">Trajanje:</span>{" "}
+                {brojRadnihDana(detalj.datumOd, detalj.datumDo)} radnih dana
+              </p>
+              {detalj.napomena && (
+                <p className="mt-1 text-slate-500">„{detalj.napomena}“</p>
+              )}
+            </div>
+
+            {(admin || detalj.zaposleniId === trenutniKorisnik?.id) && (
+              <div className="flex flex-wrap justify-end gap-2">
+                {admin && detalj.status !== "odobreno" && (
+                  <button
+                    onClick={() => akcija(() => promeniStatus(detalj.id, "odobreno"))}
+                    className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+                  >
+                    Odobri
+                  </button>
+                )}
+                {admin && detalj.status !== "odbijeno" && (
+                  <button
+                    onClick={() => akcija(() => promeniStatus(detalj.id, "odbijeno"))}
+                    className="rounded-lg bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100"
+                  >
+                    Odbij
+                  </button>
+                )}
+                <button
+                  onClick={() => akcija(() => obrisiZahtev(detalj.id))}
+                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+                >
+                  Obriši
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
