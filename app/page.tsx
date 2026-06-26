@@ -13,6 +13,7 @@ import Kalendar from "@/components/Kalendar";
 import KoJeOdsutan from "@/components/KoJeOdsutan";
 import RodjendaniSlave from "@/components/RodjendaniSlave";
 import LoginPage from "@/components/LoginPage";
+import Logo from "@/components/Logo";
 
 type Tab = "pregled" | "kalendar" | "zaposleni";
 
@@ -55,15 +56,10 @@ export default function Home() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">Godišnji odmori</h1>
-              <p className="text-xs text-slate-500">Upravljanje odsustvima zaposlenih</p>
+            <Logo className="h-9 w-auto text-slate-900" />
+            <div className="hidden border-l border-slate-200 pl-3 sm:block">
+              <h1 className="text-sm font-bold text-slate-900">Godišnji odmori</h1>
+              <p className="text-xs text-slate-500">Upravljanje odsustvima</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

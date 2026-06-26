@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
+import Logo from "./Logo";
 
 export default function LoginPage() {
   const { prijava } = useStore();
@@ -23,14 +24,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-white">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
-          </div>
+          <Logo className="h-12 w-auto text-slate-900" />
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Godišnji odmori</h1>
+            <h1 className="text-lg font-bold text-slate-900">Godišnji odmori</h1>
             <p className="text-sm text-slate-500">Prijavite se da nastavite</p>
           </div>
         </div>
