@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { TipOdsustva, TIP_LABELE, jeAdmin } from "@/lib/types";
+import { TipOdsustva, TIP_LABELE, jeAdmin, trosiFond } from "@/lib/types";
 import { brojRadnihDana, danas, iskorisceniGodisnji } from "@/lib/utils";
 
 interface Props {
@@ -30,7 +30,7 @@ export default function ZahtevForma({ onGotovo }: Props) {
   const izabrani = zaposleni.find((z) => z.id === zaposleniId);
   const iskorisceno = izabrani ? iskorisceniGodisnji(zahtevi, izabrani.id) : 0;
   const preostalo = izabrani ? izabrani.brojDanaGodisnjeg - iskorisceno : 0;
-  const prekoracenje = tip === "godisnji" && izabrani && radniDani > preostalo;
+  const prekoracenje = trosiFond(tip) && izabrani && radniDani > preostalo;
 
   async function posalji(e: React.FormEvent) {
     e.preventDefault();
@@ -114,7 +114,7 @@ export default function ZahtevForma({ onGotovo }: Props) {
           {radniDani} {radniDani === 1 ? "radni dan" : "radnih dana"}
         </span>{" "}
         <span className="text-brand-400">(bez vikenda i praznika)</span>
-        {tip === "godisnji" && izabrani && (
+        {trosiFond(tip) && izabrani && (
           <div
             className={`mt-1 text-xs ${prekoracenje ? "font-medium text-rose-600" : "text-brand-500"}`}
           >

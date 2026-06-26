@@ -5,7 +5,7 @@ import {
   javniZaposleni,
   javniZahtev,
 } from "@/lib/auth-server";
-import { jeAdmin, StatusZahteva } from "@/lib/types";
+import { jeAdmin, trosiFond, StatusZahteva, TipOdsustva } from "@/lib/types";
 import {
   pronadjiKonfliktDizajnera,
   zauzetiGodisnji,
@@ -70,7 +70,7 @@ export async function PATCH(
     }
 
     // Kontrola fonda (samo "godisnji"), bez ovog zahteva.
-    if (zahtev.tip === "godisnji") {
+    if (trosiFond(zahtev.tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
       const zauzeto = zauzetiGodisnji(javniZahtevi, zahtev.zaposleniId, zahtev.id);
       const trazeno = brojRadnihDana(datumOd, datumDo);
@@ -125,7 +125,7 @@ export async function PATCH(
     }
 
     // Kontrola godišnjeg fonda pri odobravanju (samo "godisnji").
-    if (zahtev.tip === "godisnji") {
+    if (trosiFond(zahtev.tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
       const zauzeto = zauzetiGodisnji(
         sviZahtevi.map(javniZahtev),

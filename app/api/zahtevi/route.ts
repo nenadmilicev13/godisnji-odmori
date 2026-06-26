@@ -5,7 +5,7 @@ import {
   javniZaposleni,
   javniZahtev,
 } from "@/lib/auth-server";
-import { jeAdmin } from "@/lib/types";
+import { jeAdmin, trosiFond } from "@/lib/types";
 import {
   pronadjiKonfliktDizajnera,
   iskorisceniGodisnji,
@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2) Kontrola godišnjeg fonda (samo za tip "godisnji").
-  if (tip === "godisnji") {
+  // 2) Kontrola godišnjeg fonda (godišnji + slobodan dan).
+  if (trosiFond(tip as TipOdsustva)) {
     const podnosilac = sviZaposleni.find((z) => z.id === zaposleniId);
     const iskorisceno = iskorisceniGodisnji(javniZahtevi, zaposleniId);
     const trazeno = brojRadnihDana(datumOd, datumDo);

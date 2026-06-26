@@ -1,4 +1,4 @@
-import { StatusZahteva, Zaposleni, ZahtevZaOdsustvo } from "./types";
+import { StatusZahteva, Zaposleni, ZahtevZaOdsustvo, trosiFond } from "./types";
 import { jePraznik } from "./praznici";
 
 /** Generiše jednostavan jedinstveni ID bez eksternih zavisnosti. */
@@ -62,7 +62,7 @@ export function zauzetiGodisnji(
     .filter(
       (z) =>
         z.zaposleniId === zaposleniId &&
-        z.tip === "godisnji" &&
+        trosiFond(z.tip) &&
         z.status !== "odbijeno" &&
         z.id !== ignorirajId,
     )
