@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
+import Avatar from "./Avatar";
 import {
   Zaposleni,
   TipOdsustva,
@@ -65,6 +66,59 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
   const [cuva, setCuva] = useState(false);
   const [greska, setGreska] = useState("");
 
+  // Profilna slika
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [slika, setSlika] = useState<string | null>(z.slika ?? null);
+  const [slikaCuva, setSlikaCuva] = useState(false);
+
+  /** Učita sliku, smanji na 256px i vrati JPEG data URL. */
+  function smanjiSliku(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const vel = 256;
+          const c = document.createElement("canvas");
+          c.width = vel;
+          c.height = vel;
+          const ctx = c.getContext("2d");
+          if (!ctx) return reject(new Error("canvas"));
+          const min = Math.min(img.width, img.height);
+          const sx = (img.width - min) / 2;
+          const sy = (img.height - min) / 2;
+          ctx.drawImage(img, sx, sy, min, min, 0, 0, vel, vel);
+          resolve(c.toDataURL("image/jpeg", 0.8));
+        };
+        img.onerror = reject;
+        img.src = reader.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function izaberiSliku(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setSlikaCuva(true);
+    try {
+      const data = await smanjiSliku(file);
+      const g = await azurirajProfil(z.id, { slika: data });
+      if (!g) setSlika(data);
+    } finally {
+      setSlikaCuva(false);
+    }
+  }
+
+  async function ukloniSliku() {
+    setSlikaCuva(true);
+    const g = await azurirajProfil(z.id, { slika: null });
+    if (!g) setSlika(null);
+    setSlikaCuva(false);
+  }
+
   async function sacuvaj() {
     if (!ime.trim()) return setGreska("Ime i prezime ne mogu biti prazni.");
     setCuva(true);
@@ -103,18 +157,32 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
     }))
     .filter((x) => x.dana > 0);
 
-  const inicijali = (ime || z.ime)
-    .split(" ")
-    .map((d) => d[0])
-    .slice(0, 2)
-    .join("");
-
   return (
     <div className="space-y-5">
       {/* Zaglavlje */}
       <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-lg font-semibold text-brand-700">
-          {inicijali}
+        <div className="relative shrink-0">
+          <Avatar ime={ime || z.ime} slika={slika} className="h-16 w-16 text-lg" />
+          {mogeIzmena && (
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={slikaCuva}
+              title="Promeni sliku"
+              className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white shadow hover:bg-brand-700 disabled:opacity-60"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                <circle cx="12" cy="13" r="3" />
+              </svg>
+            </button>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={izaberiSliku}
+          />
         </div>
         <div className="min-w-0">
           <p className="text-lg font-semibold text-slate-900">{ime || z.ime}</p>
@@ -127,6 +195,15 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             )}
             <span className="text-xs text-slate-400">{z.email}</span>
           </div>
+          {mogeIzmena && slika && (
+            <button
+              onClick={ukloniSliku}
+              disabled={slikaCuva}
+              className="mt-1 text-xs font-medium text-rose-500 hover:text-rose-700 disabled:opacity-60"
+            >
+              Ukloni sliku
+            </button>
+          )}
         </div>
       </div>
 

@@ -20,7 +20,8 @@ model Zaposleni {
   lozinkaHash       String
   brojDanaGodisnjeg Int      @default(20)
   rodjendan         String? // yyyy-mm-dd (godina nebitna)
-  slava             String? // npr. "Sveti Nikola (19.12.)"
+  slava             String? // yyyy-mm-dd
+  slika             String? // profilna slika kao data URL (mali resize)
   kreirano          DateTime @default(now())
   zahtevi           Zahtev[]
 }

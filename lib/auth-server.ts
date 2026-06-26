@@ -18,6 +18,7 @@ type ZaposleniRed = {
   brojDanaGodisnjeg: number;
   rodjendan?: string | null;
   slava?: string | null;
+  slika?: string | null;
   lozinkaHash?: string;
 };
 
@@ -32,6 +33,7 @@ export function javniZaposleni(z: ZaposleniRed): Zaposleni {
     brojDanaGodisnjeg: z.brojDanaGodisnjeg,
     rodjendan: z.rodjendan ?? null,
     slava: z.slava ?? null,
+    slika: z.slika ?? null,
   };
 }
 

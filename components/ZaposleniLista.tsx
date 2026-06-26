@@ -6,6 +6,7 @@ import { Uloga, ULOGA_LABELE, jeAdmin, Zaposleni } from "@/lib/types";
 import { iskorisceniGodisnji } from "@/lib/utils";
 import Modal from "./Modal";
 import ZaposleniProfil from "./ZaposleniProfil";
+import Avatar from "./Avatar";
 
 export default function ZaposleniLista() {
   const {
@@ -75,13 +76,7 @@ export default function ZaposleniLista() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
-                    {z.ime
-                      .split(" ")
-                      .map((d) => d[0])
-                      .slice(0, 2)
-                      .join("")}
-                  </div>
+                  <Avatar ime={z.ime} slika={z.slika} className="h-11 w-11 text-sm" />
                   <div>
                     <p className="font-semibold text-slate-900">{z.ime}</p>
                     <p className="text-sm text-slate-500">{z.pozicija}</p>

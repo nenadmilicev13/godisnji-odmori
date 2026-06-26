@@ -47,7 +47,17 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   }
 
-  const data: { ime?: string; rodjendan?: string | null; slava?: string | null } = {};
+  const data: {
+    ime?: string;
+    rodjendan?: string | null;
+    slava?: string | null;
+    slika?: string | null;
+  } = {};
+
+  if ("slika" in body) {
+    data.slika =
+      typeof body.slika === "string" && body.slika ? body.slika : null;
+  }
 
   if (typeof body.ime === "string") {
     const ime = body.ime.trim();

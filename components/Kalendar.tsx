@@ -409,9 +409,14 @@ export default function Kalendar() {
                     className="sticky left-0 z-10 flex shrink-0 items-center gap-2.5 bg-white px-3"
                     style={{ width: LEVO, height: VISINA_REDA }}
                   >
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${BOJE_AVATARA[idx % BOJE_AVATARA.length]}`}>
-                      {inicijali}
-                    </div>
+                    {z.slika ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={z.slika} alt={z.ime} className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${BOJE_AVATARA[idx % BOJE_AVATARA.length]}`}>
+                        {inicijali}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-800">{z.ime}</p>
                       <p className="truncate text-xs text-slate-400">{z.pozicija}</p>

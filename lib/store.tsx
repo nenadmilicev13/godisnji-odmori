@@ -34,7 +34,12 @@ interface StoreContext {
   dodajZaposlenog: (z: Omit<Zaposleni, "id">) => Promise<string | null>;
   azurirajProfil: (
     id: string,
-    podaci: { ime?: string; rodjendan?: string | null; slava?: string | null },
+    podaci: {
+      ime?: string;
+      rodjendan?: string | null;
+      slava?: string | null;
+      slika?: string | null;
+    },
   ) => Promise<string | null>;
   promeniLozinku: (
     id: string,

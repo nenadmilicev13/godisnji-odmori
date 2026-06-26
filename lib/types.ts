@@ -20,6 +20,7 @@ export interface Zaposleni {
   brojDanaGodisnjeg: number; // ukupan godišnji fond dana
   rodjendan?: string | null; // yyyy-mm-dd
   slava?: string | null;
+  slika?: string | null; // profilna slika (data URL)
 }
 
 /** Admin (šef) je jedini koji može da odobrava/odbija zahteve. */
