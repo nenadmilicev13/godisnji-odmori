@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-import { StatusZahteva, STATUS_LABELE, TIP_LABELE } from "@/lib/types";
+import { StatusZahteva, STATUS_LABELE, TIP_LABELE, jeAdmin } from "@/lib/types";
 import { brojRadnihDana } from "@/lib/utils";
 import { nazivPraznika } from "@/lib/praznici";
 
@@ -45,9 +45,70 @@ function razlikaDana(aIso: string, bIso: string): number {
   );
 }
 
+/** Pomera ISO datum za n dana. */
+function pomeriIso(s: string, n: number): string {
+  const d = parseIso(s);
+  d.setDate(d.getDate() + n);
+  return iso(d);
+}
+
 export default function Kalendar() {
-  const { zaposleni, zahtevi } = useStore();
+  const { zaposleni, zahtevi, trenutniKorisnik, pomeriZahtev } = useStore();
+  const admin = jeAdmin(trenutniKorisnik);
   const danasIso = iso(new Date());
+
+  // Pan (prevlačenje cele ose mišem).
+  const skrolRef = useRef<HTMLDivElement>(null);
+  const pan = useRef({ active: false, startX: 0, startScroll: 0 });
+
+  // Prevlačenje trake (admin) za promenu termina.
+  const dragRef = useRef<{ id: string; startX: number; datumOd: string; datumDo: string } | null>(null);
+  const [drag, setDrag] = useState<{ id: string; pomak: number } | null>(null);
+  const [poruka, setPoruka] = useState("");
+  const [cuva, setCuva] = useState(false);
+
+  function panDown(e: React.PointerEvent) {
+    const el = skrolRef.current;
+    if (!el || dragRef.current) return;
+    pan.current = { active: true, startX: e.clientX, startScroll: el.scrollLeft };
+  }
+  function panMove(e: React.PointerEvent) {
+    if (!pan.current.active || !skrolRef.current) return;
+    skrolRef.current.scrollLeft =
+      pan.current.startScroll - (e.clientX - pan.current.startX);
+  }
+  function panUp() {
+    pan.current.active = false;
+  }
+
+  function trakaDown(e: React.PointerEvent, r: { id: string; datumOd: string; datumDo: string }) {
+    if (!admin) return;
+    e.stopPropagation();
+    e.preventDefault();
+    dragRef.current = { id: r.id, startX: e.clientX, datumOd: r.datumOd, datumDo: r.datumDo };
+    setDrag({ id: r.id, pomak: 0 });
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  }
+  function trakaMove(e: React.PointerEvent) {
+    if (!dragRef.current) return;
+    const dani = Math.round((e.clientX - dragRef.current.startX) / SIRINA_DANA);
+    setDrag({ id: dragRef.current.id, pomak: dani });
+  }
+  async function trakaUp() {
+    const d = dragRef.current;
+    const trenutniPomak = drag?.pomak ?? 0;
+    dragRef.current = null;
+    setDrag(null);
+    if (!d || trenutniPomak === 0) return;
+    setCuva(true);
+    const greska = await pomeriZahtev(
+      d.id,
+      pomeriIso(d.datumOd, trenutniPomak),
+      pomeriIso(d.datumDo, trenutniPomak),
+    );
+    setCuva(false);
+    setPoruka(greska ?? "");
+  }
 
   // Početak prozora: 6 dana pre danas.
   const [pocetakIso, setPocetakIso] = useState(() => {
@@ -134,8 +195,28 @@ export default function Kalendar() {
         </div>
       </div>
 
+      {/* Poruka (greška pri pomeranju) / pomoć */}
+      {poruka && (
+        <div className="flex items-start justify-between gap-3 border-b border-rose-100 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+          <span>{poruka}</span>
+          <button onClick={() => setPoruka("")} className="shrink-0 font-medium text-rose-500 hover:text-rose-700">✕</button>
+        </div>
+      )}
+      {admin && (
+        <div className="border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-xs text-slate-400">
+          💡 Prevuci traku levo/desno da pomeriš termin · uhvati praznu površinu da pomeriš osu
+        </div>
+      )}
+
       {/* Timeline */}
-      <div className="overflow-x-auto">
+      <div
+        ref={skrolRef}
+        onPointerDown={panDown}
+        onPointerMove={panMove}
+        onPointerUp={panUp}
+        onPointerLeave={panUp}
+        className="cursor-grab overflow-x-auto active:cursor-grabbing"
+      >
         <div style={{ minWidth: LEVO + sirinaOse }}>
           {/* Zaglavlje: meseci + dani */}
           <div className="sticky top-0 z-20 border-b border-slate-200 bg-white">
@@ -257,16 +338,29 @@ export default function Kalendar() {
                     })}
 
                     {/* Trake odsustva */}
-                    {trake.map((t) => (
-                      <div
-                        key={t.r.id}
-                        title={`${TIP_LABELE[t.r.tip]} · ${t.r.datumOd} – ${t.r.datumDo} · ${STATUS_LABELE[t.r.status]}`}
-                        className={`absolute top-1/2 flex -translate-y-1/2 items-center overflow-hidden rounded-md px-2 text-xs font-medium text-white shadow-sm ${BOJA_STATUSA[t.r.status]}`}
-                        style={{ left: t.levo + 2, width: Math.max(0, t.sirina - 4), height: 26 }}
-                      >
-                        {t.dana}d
-                      </div>
-                    ))}
+                    {trake.map((t) => {
+                      const seVuce = drag?.id === t.r.id;
+                      const pomakPx = seVuce ? drag!.pomak * SIRINA_DANA : 0;
+                      return (
+                        <div
+                          key={t.r.id}
+                          onPointerDown={(e) => trakaDown(e, t.r)}
+                          onPointerMove={trakaMove}
+                          onPointerUp={trakaUp}
+                          title={`${TIP_LABELE[t.r.tip]} · ${t.r.datumOd} – ${t.r.datumDo} · ${STATUS_LABELE[t.r.status]}${admin ? " · prevuci za novi termin" : ""}`}
+                          className={`absolute top-1/2 flex items-center overflow-hidden rounded-md px-2 text-xs font-medium text-white shadow-sm ${BOJA_STATUSA[t.r.status]} ${admin ? "cursor-grab active:cursor-grabbing" : ""} ${seVuce ? "z-20 opacity-90 ring-2 ring-white" : ""} ${cuva && seVuce ? "animate-pulse" : ""}`}
+                          style={{
+                            left: t.levo + 2,
+                            width: Math.max(0, t.sirina - 4),
+                            height: 26,
+                            transform: `translateY(-50%) translateX(${pomakPx}px)`,
+                            touchAction: "none",
+                          }}
+                        >
+                          {t.dana}d
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

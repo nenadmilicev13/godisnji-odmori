@@ -27,14 +27,83 @@ export async function PATCH(
   }
 
   const body = await req.json().catch(() => ({}));
-  const status = body.status as StatusZahteva;
-  if (!["na_cekanju", "odobreno", "odbijeno"].includes(status)) {
-    return NextResponse.json({ greska: "Neispravan status." }, { status: 400 });
-  }
 
   const zahtev = await prisma.zahtev.findUnique({ where: { id: params.id } });
   if (!zahtev) {
     return NextResponse.json({ greska: "Zahtev ne postoji." }, { status: 404 });
+  }
+
+  // ——— Pomeranje termina (drag & drop u kalendaru) ———
+  if (body.datumOd && body.datumDo) {
+    const datumOd = String(body.datumOd);
+    const datumDo = String(body.datumDo);
+    if (datumOd > datumDo) {
+      return NextResponse.json(
+        { greska: "Datum „od“ ne može biti posle datuma „do“." },
+        { status: 400 },
+      );
+    }
+    const [sviZahtevi, sviZaposleni] = await Promise.all([
+      prisma.zahtev.findMany(),
+      prisma.zaposleni.findMany(),
+    ]);
+    const javniZahtevi = sviZahtevi.map(javniZahtev);
+
+    // Preklapanje dizajnera za nove datume (protiv neodbijenih, bez ovog zahteva).
+    const konflikt = pronadjiKonfliktDizajnera(
+      javniZahtevi,
+      sviZaposleni.map(javniZaposleni),
+      {
+        zaposleniId: zahtev.zaposleniId,
+        datumOd,
+        datumDo,
+        ignorirajZahtevId: zahtev.id,
+      },
+    );
+    if (konflikt) {
+      return NextResponse.json(
+        {
+          greska: `Preklapanje: ${konflikt.zaposleni.ime} već ima odsustvo ${konflikt.zahtev.datumOd} – ${konflikt.zahtev.datumDo}.`,
+        },
+        { status: 409 },
+      );
+    }
+
+    // Kontrola fonda (samo "godisnji"), bez ovog zahteva.
+    if (zahtev.tip === "godisnji") {
+      const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
+      const iskoriscenoBezOvog = javniZahtevi
+        .filter(
+          (z) =>
+            z.zaposleniId === zahtev.zaposleniId &&
+            z.tip === "godisnji" &&
+            z.status === "odobreno" &&
+            z.id !== zahtev.id,
+        )
+        .reduce((s, z) => s + brojRadnihDana(z.datumOd, z.datumDo), 0);
+      const trazeno = brojRadnihDana(datumOd, datumDo);
+      if (podnosilac && iskoriscenoBezOvog + trazeno > podnosilac.brojDanaGodisnjeg) {
+        const preostalo = podnosilac.brojDanaGodisnjeg - iskoriscenoBezOvog;
+        return NextResponse.json(
+          {
+            greska: `Prekoračen fond: novi termin je ${trazeno} dana, preostalo ${preostalo} od ${podnosilac.brojDanaGodisnjeg}.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    const azuriran = await prisma.zahtev.update({
+      where: { id: params.id },
+      data: { datumOd, datumDo },
+    });
+    return NextResponse.json({ zahtev: javniZahtev(azuriran) });
+  }
+
+  // ——— Promena statusa (odobri/odbij) ———
+  const status = body.status as StatusZahteva;
+  if (!["na_cekanju", "odobreno", "odbijeno"].includes(status)) {
+    return NextResponse.json({ greska: "Neispravan status." }, { status: 400 });
   }
 
   // Pri odobravanju: spreči koliziju sa već odobrenim odsustvom drugog dizajnera.
