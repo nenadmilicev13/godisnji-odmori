@@ -9,7 +9,7 @@ import Modal from "@/components/Modal";
 import ZahtevForma from "@/components/ZahtevForma";
 import ZahteviLista from "@/components/ZahteviLista";
 import ZaposleniLista from "@/components/ZaposleniLista";
-import Kalendar from "@/components/Kalendar";
+import KalendarPrikaz from "@/components/KalendarPrikaz";
 import KoJeOdsutan from "@/components/KoJeOdsutan";
 import RodjendaniSlave from "@/components/RodjendaniSlave";
 import LoginPage from "@/components/LoginPage";
@@ -218,7 +218,7 @@ export default function Home() {
           {tab === "pregled" ? (
             <ZahteviLista />
           ) : tab === "kalendar" ? (
-            <Kalendar />
+            <KalendarPrikaz />
           ) : tab === "korpa" && admin ? (
             <Korpa />
           ) : (
