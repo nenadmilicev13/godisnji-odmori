@@ -6,10 +6,7 @@ import {
   javniZahtev,
 } from "@/lib/auth-server";
 import { jeAdmin, trosiFond, StatusZahteva, TipOdsustva } from "@/lib/types";
-import {
-  pronadjiKonfliktDizajnera,
-  proveriGodisnjiFond,
-} from "@/lib/utils";
+import { proveriGodisnjiFond } from "@/lib/utils";
 import { mejlStatus } from "@/lib/email";
 
 export async function PATCH(
@@ -68,20 +65,7 @@ export async function PATCH(
     ]);
     const javniZahtevi = sviZahtevi.map(javniZahtev);
 
-    const konflikt = pronadjiKonfliktDizajnera(
-      javniZahtevi,
-      sviZaposleni.map(javniZaposleni),
-      { zaposleniId: zahtev.zaposleniId, datumOd, datumDo, ignorirajZahtevId: zahtev.id },
-    );
-    if (konflikt) {
-      return NextResponse.json(
-        {
-          greska: `Preklapanje: ${konflikt.zaposleni.ime} već ima odsustvo ${konflikt.zahtev.datumOd} – ${konflikt.zahtev.datumDo}.`,
-        },
-        { status: 409 },
-      );
-    }
-
+    // Preklapanje dizajnera se NE blokira (šef odlučuje); proverava se samo fond.
     if (trosiFond(tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
       if (podnosilac) {
@@ -121,26 +105,8 @@ export async function PATCH(
       prisma.zahtev.findMany({ where: { obrisanoKad: null } }),
       prisma.zaposleni.findMany(),
     ]);
-    const konflikt = pronadjiKonfliktDizajnera(
-      sviZahtevi.map(javniZahtev),
-      sviZaposleni.map(javniZaposleni),
-      {
-        zaposleniId: zahtev.zaposleniId,
-        datumOd: zahtev.datumOd,
-        datumDo: zahtev.datumDo,
-        ignorirajZahtevId: zahtev.id,
-      },
-      ["odobreno"],
-    );
-    if (konflikt) {
-      return NextResponse.json(
-        {
-          greska: `Ne može se odobriti: ${konflikt.zaposleni.ime} već ima odobreno odsustvo ${konflikt.zahtev.datumOd} – ${konflikt.zahtev.datumDo}.`,
-        },
-        { status: 409 },
-      );
-    }
 
+    // Napomena: preklapanje dizajnera se NE blokira — šef svesno odlučuje.
     // Kontrola godišnjeg fonda pri odobravanju — po godini.
     if (trosiFond(zahtev.tip as TipOdsustva)) {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);

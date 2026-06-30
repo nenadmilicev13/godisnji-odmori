@@ -79,20 +79,12 @@ export async function POST(req: NextRequest) {
   ]);
   const javniZahtevi = sviZahtevi.map(javniZahtev);
 
-  // 1) Preklapanje dizajnera (protiv neodbijenih zahteva).
+  // 1) Preklapanje dizajnera — NE blokira; šef dobija notifikaciju i odlučuje.
   const konflikt = pronadjiKonfliktDizajnera(
     javniZahtevi,
     sviZaposleni.map(javniZaposleni),
     { zaposleniId, datumOd, datumDo },
   );
-  if (konflikt) {
-    return NextResponse.json(
-      {
-        greska: `Dva dizajnera ne mogu biti odsutna istovremeno. ${konflikt.zaposleni.ime} već ima odsustvo ${konflikt.zahtev.datumOd} – ${konflikt.zahtev.datumDo}.`,
-      },
-      { status: 409 },
-    );
-  }
 
   // 2) Kontrola godišnjeg fonda — po kalendarskoj godini.
   if (trosiFond(tip as TipOdsustva)) {
@@ -121,12 +113,11 @@ export async function POST(req: NextRequest) {
 
   // In-app notifikacija šefovima (osim nagradnog dana koji admin sam dodaje).
   if (status === "na_cekanju" && admini.length) {
+    const tekst = konflikt
+      ? `⚠️ Preklapanje: ${podnosilac?.ime ?? "Zaposleni"} i ${konflikt.zaposleni.ime} traže isti termin (${datumOd} – ${datumDo}). Odlučite.`
+      : `Nov zahtev: ${podnosilac?.ime ?? "Zaposleni"} — ${TIP_LABELE[tip as TipOdsustva]} (${datumOd} – ${datumDo})`;
     await prisma.notifikacija.createMany({
-      data: admini.map((a) => ({
-        korisnikId: a.id,
-        tekst: `Nov zahtev: ${podnosilac?.ime ?? "Zaposleni"} — ${TIP_LABELE[tip as TipOdsustva]} (${datumOd} – ${datumDo})`,
-        link: "pregled",
-      })),
+      data: admini.map((a) => ({ korisnikId: a.id, tekst, link: "pregled" })),
     });
   }
 

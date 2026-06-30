@@ -13,6 +13,7 @@ import {
   brojRadnihDana,
   danas,
   iskorisceniGodisnjiUGodini,
+  pronadjiKonfliktDizajnera,
 } from "@/lib/utils";
 
 interface Props {
@@ -44,6 +45,16 @@ export default function ZahtevForma({ onGotovo }: Props) {
     : 0;
   const preostalo = izabrani ? izabrani.brojDanaGodisnjeg - iskorisceno : 0;
   const prekoracenje = trosiFond(tip) && izabrani && radniDani > preostalo;
+
+  // Preklapanje sa drugim dizajnerom — samo upozorenje (šef odlučuje), ne blokira.
+  const konfliktDiz =
+    izabrani && tip !== "bolovanje"
+      ? pronadjiKonfliktDizajnera(zahtevi, zaposleni, {
+          zaposleniId,
+          datumOd,
+          datumDo,
+        })
+      : null;
 
   async function posalji(e: React.FormEvent) {
     e.preventDefault();
@@ -137,6 +148,14 @@ export default function ZahtevForma({ onGotovo }: Props) {
           </div>
         )}
       </div>
+
+      {konfliktDiz && (
+        <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          ⚠️ Preklapa se sa terminom: <b>{konfliktDiz.zaposleni.ime}</b> (
+          {konfliktDiz.zahtev.datumOd} – {konfliktDiz.zahtev.datumDo}). Možete
+          poslati zahtev — šef će dobiti obaveštenje i odlučiti.
+        </div>
+      )}
 
       <div>
         <label className="label">Napomena (opciono)</label>
