@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import Avatar from "./Avatar";
+import GodisnjaTraka from "./GodisnjaTraka";
 import {
   Zaposleni,
   TipOdsustva,
@@ -400,6 +401,14 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
         <p className="mt-1.5 text-xs text-slate-400">
           Preostalo <span className="font-medium text-slate-600">{preostalo}</span> dana godišnjeg odmora
         </p>
+
+        {/* Pregled odsustava kroz izabranu godinu */}
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="mb-2 text-xs font-medium text-slate-500">
+            Odsustva kroz {godina}
+          </p>
+          <GodisnjaTraka zaposleniId={z.id} godina={godina} />
+        </div>
       </div>
 
       {/* Mini statistika */}
