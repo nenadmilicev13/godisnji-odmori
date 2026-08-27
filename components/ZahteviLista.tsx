@@ -17,6 +17,8 @@ import Modal from "./Modal";
 
 type Filter = "sve" | StatusZahteva;
 
+const PO_STRANI = 10;
+
 export default function ZahteviLista() {
   const {
     zahtevi,
@@ -27,6 +29,7 @@ export default function ZahteviLista() {
     obrisiZahtev,
   } = useStore();
   const [filter, setFilter] = useState<Filter>("sve");
+  const [strana, setStrana] = useState(1);
   const [greska, setGreska] = useState("");
 
   // Izmena (samo dok je „na čekanju")
@@ -83,13 +86,23 @@ export default function ZahteviLista() {
 
   const filteri: Filter[] = ["sve", "na_cekanju", "odobreno", "odbijeno"];
 
+  // Paginacija — 10 zahteva po strani.
+  const ukupnoStrana = Math.max(1, Math.ceil(filtrirani.length / PO_STRANI));
+  // Klamp: ako se lista skrati (brisanje, promena filtera), ostani u opsegu.
+  const trenutnaStrana = Math.min(strana, ukupnoStrana);
+  const prviIndeks = (trenutnaStrana - 1) * PO_STRANI;
+  const naStrani = filtrirani.slice(prviIndeks, prviIndeks + PO_STRANI);
+
   return (
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
         {filteri.map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => {
+              setFilter(f);
+              setStrana(1);
+            }}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
               filter === f
                 ? "bg-brand-600 text-white"
@@ -129,7 +142,7 @@ export default function ZahteviLista() {
         </div>
       ) : (
         <div className="divide-y divide-slate-100">
-          {filtrirani.map((z) => {
+          {naStrani.map((z) => {
             const mojZahtev = z.zaposleniId === trenutniKorisnik?.id;
             return (
               <div
@@ -197,6 +210,45 @@ export default function ZahteviLista() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {ukupnoStrana > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
+          <p className="text-sm text-slate-500">
+            Prikazano {prviIndeks + 1}–{prviIndeks + naStrani.length} od{" "}
+            {filtrirani.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setStrana(trenutnaStrana - 1)}
+              disabled={trenutnaStrana === 1}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Prethodna
+            </button>
+            {Array.from({ length: ukupnoStrana }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setStrana(n)}
+                aria-current={n === trenutnaStrana ? "page" : undefined}
+                className={`min-w-[2rem] rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
+                  n === trenutnaStrana
+                    ? "bg-brand-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              onClick={() => setStrana(trenutnaStrana + 1)}
+              disabled={trenutnaStrana === ukupnoStrana}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              Sledeća
+            </button>
+          </div>
         </div>
       )}
 
