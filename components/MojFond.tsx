@@ -1,16 +1,23 @@
 "use client";
 
 import { useStore } from "@/lib/store";
-import { jeAdmin } from "@/lib/types";
 import { brojRadnihDanaUGodini } from "@/lib/utils";
 
 /**
+ * Nalozi kojima se kartica ne prikazuje. Vezano za konkretan nalog, a ne za
+ * ulogu — jer i neko sa admin pravima (npr. Nenad) treba da prati svoj fond.
+ * Ako se šef promeni, izmeni ovu listu.
+ */
+const BEZ_KARTICE = ["sava.marinkovic@baseline.rs"];
+
+/**
  * Lični pregled godišnjeg fonda za tekuću godinu — koliko je dana potrošeno,
- * koliko čeka odobrenje i koliko ostaje. Šef (admin) ovo ne vidi.
+ * koliko čeka odobrenje i koliko ostaje.
  */
 export default function MojFond() {
   const { zahtevi, trenutniKorisnik } = useStore();
-  if (!trenutniKorisnik || jeAdmin(trenutniKorisnik)) return null;
+  if (!trenutniKorisnik) return null;
+  if (BEZ_KARTICE.includes(trenutniKorisnik.email.toLowerCase())) return null;
 
   const godina = new Date().getFullYear();
 

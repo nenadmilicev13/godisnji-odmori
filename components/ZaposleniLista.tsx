@@ -26,6 +26,9 @@ export default function ZaposleniLista() {
   const [greska, setGreska] = useState("");
   const [profil, setProfil] = useState<Zaposleni | null>(null);
 
+  /** Radnik vidi detalje samo za sebe; šef vidi za sve. */
+  const smeDetalje = (z: Zaposleni) => admin || z.id === trenutniKorisnik?.id;
+
   async function dodaj(e: React.FormEvent) {
     e.preventDefault();
     if (!ime.trim()) return;
@@ -68,11 +71,16 @@ export default function ZaposleniLista() {
             100,
             Math.round((iskorisceno / z.brojDanaGodisnjeg) * 100) || 0,
           );
+          const dozvoljeno = smeDetalje(z);
           return (
             <div
               key={z.id}
-              onClick={() => setProfil(z)}
-              className="card cursor-pointer p-5 transition hover:border-brand-300 hover:shadow-md"
+              onClick={dozvoljeno ? () => setProfil(z) : undefined}
+              className={`card p-5 transition ${
+                dozvoljeno
+                  ? "cursor-pointer hover:border-brand-300 hover:shadow-md"
+                  : ""
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -103,6 +111,7 @@ export default function ZaposleniLista() {
                 )}
               </div>
 
+              {!dozvoljeno ? null : (
               <div className="mt-4">
                 <div className="mb-1.5 flex justify-between text-sm">
                   <span className="text-slate-500">Iskorišćeno</span>
@@ -126,6 +135,7 @@ export default function ZaposleniLista() {
                   </svg>
                 </p>
               </div>
+              )}
             </div>
           );
         })}

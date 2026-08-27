@@ -35,6 +35,8 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
 
   const jeVlasnik = trenutniKorisnik?.id === z.id;
   const mogeIzmena = jeAdmin(trenutniKorisnik) || jeVlasnik;
+  // Radnik ne sme da vidi tuđi profil (dani, istorija zahteva).
+  const smePregled = mogeIzmena;
 
   // Promena lozinke
   const [lozinkaOtvorena, setLozinkaOtvorena] = useState(false);
@@ -162,6 +164,18 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
         .reduce((s, r) => s + brojRadnihDana(r.datumOd, r.datumDo), 0),
     }))
     .filter((x) => x.dana > 0);
+
+  // Zaštita i ovde, ne samo na listi — profil se ne otvara za tuđe naloge.
+  if (!smePregled) {
+    return (
+      <div className="py-6 text-center">
+        <p className="font-medium text-slate-700">{z.ime}</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Nemaš pristup tuđem profilu.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
