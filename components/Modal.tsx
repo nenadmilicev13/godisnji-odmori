@@ -2,14 +2,31 @@
 
 import { useEffect } from "react";
 
+type Sirina = "lg" | "xl" | "2xl" | "3xl";
+
+const SIRINE: Record<Sirina, string> = {
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+};
+
 interface Props {
   otvoren: boolean;
   naslov: string;
   onZatvori: () => void;
   children: React.ReactNode;
+  /** Šira varijanta za sadržaj koji ne staje u jednu kolonu. */
+  sirina?: Sirina;
 }
 
-export default function Modal({ otvoren, naslov, onZatvori, children }: Props) {
+export default function Modal({
+  otvoren,
+  naslov,
+  onZatvori,
+  children,
+  sirina = "lg",
+}: Props) {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onZatvori();
@@ -26,8 +43,10 @@ export default function Modal({ otvoren, naslov, onZatvori, children }: Props) {
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         onClick={onZatvori}
       />
-      <div className="relative z-10 w-full max-w-lg animate-scale-in card p-6">
-        <div className="mb-4 flex items-center justify-between">
+      <div
+        className={`relative z-10 flex max-h-[90vh] w-full flex-col animate-scale-in card p-0 ${SIRINE[sirina]}`}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-900">{naslov}</h2>
           <button
             onClick={onZatvori}
@@ -47,7 +66,7 @@ export default function Modal({ otvoren, naslov, onZatvori, children }: Props) {
             </svg>
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
       </div>
     </div>
   );

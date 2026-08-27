@@ -145,6 +145,7 @@ export default function ZaposleniLista() {
         otvoren={!!profil}
         naslov="Profil zaposlenog"
         onZatvori={() => setProfil(null)}
+        sirina="3xl"
       >
         {profil && <ZaposleniProfil zaposleni={profil} />}
       </Modal>

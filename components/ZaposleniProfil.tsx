@@ -227,259 +227,266 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
         </div>
       </div>
 
-      {/* Rođendan i slava */}
-      <div className="rounded-xl border border-slate-200 p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-slate-700">Lični datumi</h4>
-          {mogeIzmena && !izmena && (
-            <button
-              onClick={() => setIzmena(true)}
-              className="text-xs font-medium text-brand-600 hover:text-brand-700"
-            >
-              Izmeni
-            </button>
+      {/* Dve kolone na širem ekranu — na telefonu ostaje jedna. */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-5">
+    {/* Godišnji fond (po godini) */}
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm text-slate-500">Godišnji fond za</span>
+              <select
+                className="input h-8 w-28 py-1 text-sm"
+                value={godina}
+                onChange={(e) => setGodina(Number(e.target.value))}
+              >
+                {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 1 + i).map(
+                  (g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+            <div className="mb-1.5 flex justify-between text-sm">
+              <span className="text-slate-500">Iskorišćeno</span>
+              <span className="font-medium text-slate-700">
+                {iskorisceno} / {z.brojDanaGodisnjeg} dana
+              </span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full transition-all ${preostalo < 0 ? "bg-rose-500" : "bg-brand-500"}`}
+                style={{ width: `${procenat}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Preostalo <span className="font-medium text-slate-600">{preostalo}</span> dana godišnjeg odmora
+            </p>
+
+            {/* Pregled odsustava kroz izabranu godinu */}
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <p className="mb-2 text-xs font-medium text-slate-500">
+                Odsustva kroz {godina}
+              </p>
+              <GodisnjaTraka zaposleniId={z.id} godina={godina} />
+            </div>
+          </div>
+
+    {/* Mini statistika */}
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-lg bg-slate-50 p-3">
+              <p className="text-xl font-bold text-slate-900">{moji.length}</p>
+              <p className="text-xs text-slate-500">Ukupno zahteva</p>
+            </div>
+            <div className="rounded-lg bg-amber-50 p-3">
+              <p className="text-xl font-bold text-amber-600">{naCekanju}</p>
+              <p className="text-xs text-slate-500">Na čekanju</p>
+            </div>
+            <div className="rounded-lg bg-emerald-50 p-3">
+              <p className="text-xl font-bold text-emerald-600">{odobreno}</p>
+              <p className="text-xs text-slate-500">Odobreno</p>
+            </div>
+          </div>
+
+    {/* Po tipu odsustva */}
+          {poTipu.length > 0 && (
+            <div>
+              <h4 className="mb-2 text-sm font-semibold text-slate-700">Iskorišćeno po tipu</h4>
+              <div className="space-y-1.5">
+                {poTipu.map((x) => (
+                  <div key={x.tip} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{TIP_LABELE[x.tip]}</span>
+                    <span className="font-medium text-slate-700">{x.dana} dana</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        {izmena ? (
-          <div className="space-y-3">
-            <div>
-              <label className="label">Ime i prezime</label>
-              <input
-                className="input"
-                value={ime}
-                placeholder="npr. Petar Petrović"
-                onChange={(e) => setIme(e.target.value)}
-              />
+        <div className="space-y-5">
+    {/* Rođendan i slava */}
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-700">Lični datumi</h4>
+              {mogeIzmena && !izmena && (
+                <button
+                  onClick={() => setIzmena(true)}
+                  className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                >
+                  Izmeni
+                </button>
+              )}
             </div>
-            <div>
-              <label className="label">🎂 Rođendan</label>
-              <input
-                type="date"
-                className="input"
-                value={rodjendan}
-                onChange={(e) => setRodjendan(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">🕯️ Slava (datum)</label>
-              <input
-                type="date"
-                className="input"
-                value={slava}
-                onChange={(e) => setSlava(e.target.value)}
-              />
-            </div>
-            {greska && (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{greska}</p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                className="btn-ghost px-3 py-1.5 text-sm"
-                onClick={() => {
-                  setIzmena(false);
-                  setIme(z.ime);
-                  setRodjendan(z.rodjendan ?? "");
-                  setSlava(z.slava ?? "");
-                  setGreska("");
-                }}
-              >
-                Otkaži
-              </button>
-              <button className="btn-primary px-3 py-1.5 text-sm" onClick={sacuvaj} disabled={cuva}>
-                {cuva ? "Čuvanje..." : "Sačuvaj"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-xs text-slate-400">🎂 Rođendan</p>
-              <p className="font-medium text-slate-700">{formatDanMesec(rodjendan || z.rodjendan)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">🕯️ Slava</p>
-              <p className="font-medium text-slate-700">{formatDanMesec(slava || z.slava)}</p>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* Lozinka */}
-      {mogeIzmena && (
-        <div className="rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-700">
-              {jeVlasnik ? "Lozinka" : "Resetuj lozinku"}
-            </h4>
-            {!lozinkaOtvorena && (
-              <button
-                onClick={() => {
-                  setLozinkaOtvorena(true);
-                  setLozinkaPoruka("");
-                }}
-                className="text-xs font-medium text-brand-600 hover:text-brand-700"
-              >
-                {jeVlasnik ? "Promeni lozinku" : "Postavi novu"}
-              </button>
-            )}
-          </div>
-
-          {lozinkaOtvorena && (
-            <div className="mt-3 space-y-3">
-              {jeVlasnik && (
+            {izmena ? (
+              <div className="space-y-3">
                 <div>
-                  <label className="label">Trenutna lozinka</label>
+                  <label className="label">Ime i prezime</label>
                   <input
-                    type="password"
                     className="input"
-                    value={staraLozinka}
-                    onChange={(e) => setStaraLozinka(e.target.value)}
+                    value={ime}
+                    placeholder="npr. Petar Petrović"
+                    onChange={(e) => setIme(e.target.value)}
                   />
                 </div>
-              )}
-              <div>
-                <label className="label">Nova lozinka</label>
-                <input
-                  type="password"
-                  className="input"
-                  value={novaLozinka}
-                  placeholder="bar 6 karaktera"
-                  onChange={(e) => setNovaLozinka(e.target.value)}
-                />
+                <div>
+                  <label className="label">🎂 Rođendan</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={rodjendan}
+                    onChange={(e) => setRodjendan(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label">🕯️ Slava (datum)</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={slava}
+                    onChange={(e) => setSlava(e.target.value)}
+                  />
+                </div>
+                {greska && (
+                  <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{greska}</p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="btn-ghost px-3 py-1.5 text-sm"
+                    onClick={() => {
+                      setIzmena(false);
+                      setIme(z.ime);
+                      setRodjendan(z.rodjendan ?? "");
+                      setSlava(z.slava ?? "");
+                      setGreska("");
+                    }}
+                  >
+                    Otkaži
+                  </button>
+                  <button className="btn-primary px-3 py-1.5 text-sm" onClick={sacuvaj} disabled={cuva}>
+                    {cuva ? "Čuvanje..." : "Sačuvaj"}
+                  </button>
+                </div>
               </div>
-              {lozinkaPoruka && (
-                <p
-                  className={`rounded-lg px-3 py-2 text-sm ${
-                    lozinkaOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
-                  }`}
-                >
-                  {lozinkaPoruka}
-                </p>
-              )}
-              <div className="flex justify-end gap-2">
-                <button
-                  className="btn-ghost px-3 py-1.5 text-sm"
-                  onClick={() => {
-                    setLozinkaOtvorena(false);
-                    setStaraLozinka("");
-                    setNovaLozinka("");
-                    setLozinkaPoruka("");
-                  }}
-                >
-                  Zatvori
-                </button>
-                <button
-                  className="btn-primary px-3 py-1.5 text-sm"
-                  onClick={sacuvajLozinku}
-                  disabled={cuvaLozinku}
-                >
-                  {cuvaLozinku ? "Čuvanje..." : "Sačuvaj lozinku"}
-                </button>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-slate-400">🎂 Rođendan</p>
+                  <p className="font-medium text-slate-700">{formatDanMesec(rodjendan || z.rodjendan)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400">🕯️ Slava</p>
+                  <p className="font-medium text-slate-700">{formatDanMesec(slava || z.slava)}</p>
+                </div>
               </div>
+            )}
+          </div>
+
+    {/* Lozinka */}
+          {mogeIzmena && (
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-slate-700">
+                  {jeVlasnik ? "Lozinka" : "Resetuj lozinku"}
+                </h4>
+                {!lozinkaOtvorena && (
+                  <button
+                    onClick={() => {
+                      setLozinkaOtvorena(true);
+                      setLozinkaPoruka("");
+                    }}
+                    className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                  >
+                    {jeVlasnik ? "Promeni lozinku" : "Postavi novu"}
+                  </button>
+                )}
+              </div>
+
+              {lozinkaOtvorena && (
+                <div className="mt-3 space-y-3">
+                  {jeVlasnik && (
+                    <div>
+                      <label className="label">Trenutna lozinka</label>
+                      <input
+                        type="password"
+                        className="input"
+                        value={staraLozinka}
+                        onChange={(e) => setStaraLozinka(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="label">Nova lozinka</label>
+                    <input
+                      type="password"
+                      className="input"
+                      value={novaLozinka}
+                      placeholder="bar 6 karaktera"
+                      onChange={(e) => setNovaLozinka(e.target.value)}
+                    />
+                  </div>
+                  {lozinkaPoruka && (
+                    <p
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        lozinkaOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"
+                      }`}
+                    >
+                      {lozinkaPoruka}
+                    </p>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="btn-ghost px-3 py-1.5 text-sm"
+                      onClick={() => {
+                        setLozinkaOtvorena(false);
+                        setStaraLozinka("");
+                        setNovaLozinka("");
+                        setLozinkaPoruka("");
+                      }}
+                    >
+                      Zatvori
+                    </button>
+                    <button
+                      className="btn-primary px-3 py-1.5 text-sm"
+                      onClick={sacuvajLozinku}
+                      disabled={cuvaLozinku}
+                    >
+                      {cuvaLozinku ? "Čuvanje..." : "Sačuvaj lozinku"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Godišnji fond (po godini) */}
-      <div className="rounded-xl border border-slate-200 p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm text-slate-500">Godišnji fond za</span>
-          <select
-            className="input h-8 w-28 py-1 text-sm"
-            value={godina}
-            onChange={(e) => setGodina(Number(e.target.value))}
-          >
-            {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 1 + i).map(
-              (g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ),
+    {/* Istorija zahteva */}
+          <div>
+            <h4 className="mb-2 text-sm font-semibold text-slate-700">Istorija zahteva</h4>
+            {moji.length === 0 ? (
+              <p className="text-sm text-slate-400">Nema zahteva.</p>
+            ) : (
+              <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                {moji.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700">{TIP_LABELE[r.tip]}</p>
+                      <p className="text-xs text-slate-400">
+                        {formatDatum(r.datumOd)} – {formatDatum(r.datumDo)} ·{" "}
+                        {brojRadnihDana(r.datumOd, r.datumDo)} dana
+                      </p>
+                    </div>
+                    <Badge status={r.status} />
+                  </div>
+                ))}
+              </div>
             )}
-          </select>
-        </div>
-        <div className="mb-1.5 flex justify-between text-sm">
-          <span className="text-slate-500">Iskorišćeno</span>
-          <span className="font-medium text-slate-700">
-            {iskorisceno} / {z.brojDanaGodisnjeg} dana
-          </span>
-        </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className={`h-full rounded-full transition-all ${preostalo < 0 ? "bg-rose-500" : "bg-brand-500"}`}
-            style={{ width: `${procenat}%` }}
-          />
-        </div>
-        <p className="mt-1.5 text-xs text-slate-400">
-          Preostalo <span className="font-medium text-slate-600">{preostalo}</span> dana godišnjeg odmora
-        </p>
-
-        {/* Pregled odsustava kroz izabranu godinu */}
-        <div className="mt-4 border-t border-slate-100 pt-3">
-          <p className="mb-2 text-xs font-medium text-slate-500">
-            Odsustva kroz {godina}
-          </p>
-          <GodisnjaTraka zaposleniId={z.id} godina={godina} />
-        </div>
-      </div>
-
-      {/* Mini statistika */}
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-lg bg-slate-50 p-3">
-          <p className="text-xl font-bold text-slate-900">{moji.length}</p>
-          <p className="text-xs text-slate-500">Ukupno zahteva</p>
-        </div>
-        <div className="rounded-lg bg-amber-50 p-3">
-          <p className="text-xl font-bold text-amber-600">{naCekanju}</p>
-          <p className="text-xs text-slate-500">Na čekanju</p>
-        </div>
-        <div className="rounded-lg bg-emerald-50 p-3">
-          <p className="text-xl font-bold text-emerald-600">{odobreno}</p>
-          <p className="text-xs text-slate-500">Odobreno</p>
-        </div>
-      </div>
-
-      {/* Po tipu odsustva */}
-      {poTipu.length > 0 && (
-        <div>
-          <h4 className="mb-2 text-sm font-semibold text-slate-700">Iskorišćeno po tipu</h4>
-          <div className="space-y-1.5">
-            {poTipu.map((x) => (
-              <div key={x.tip} className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">{TIP_LABELE[x.tip]}</span>
-                <span className="font-medium text-slate-700">{x.dana} dana</span>
-              </div>
-            ))}
           </div>
         </div>
-      )}
-
-      {/* Istorija zahteva */}
-      <div>
-        <h4 className="mb-2 text-sm font-semibold text-slate-700">Istorija zahteva</h4>
-        {moji.length === 0 ? (
-          <p className="text-sm text-slate-400">Nema zahteva.</p>
-        ) : (
-          <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
-            {moji.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-700">{TIP_LABELE[r.tip]}</p>
-                  <p className="text-xs text-slate-400">
-                    {formatDatum(r.datumOd)} – {formatDatum(r.datumDo)} ·{" "}
-                    {brojRadnihDana(r.datumOd, r.datumDo)} dana
-                  </p>
-                </div>
-                <Badge status={r.status} />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
