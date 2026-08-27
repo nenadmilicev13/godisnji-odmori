@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { TIP_LABELE } from "@/lib/types";
-import { danas, formatDatum } from "@/lib/utils";
+import { TIP_LABELE, ZahtevZaOdsustvo } from "@/lib/types";
+import { brojRadnihDana, danas, formatDatum } from "@/lib/utils";
 
 /** Dodaje n dana ISO datumu (yyyy-mm-dd). */
 function plusDana(iso: string, n: number): string {
@@ -13,8 +14,68 @@ function plusDana(iso: string, n: number): string {
   return `${dt.getFullYear()}-${mm}-${dd}`;
 }
 
+/** Jedan red u listi — klik otvara detalje odsustva. */
+function Stavka({
+  z,
+  ime,
+  desno,
+  otvoren,
+  onKlik,
+}: {
+  z: ZahtevZaOdsustvo;
+  ime: string;
+  desno: string;
+  otvoren: boolean;
+  onKlik: () => void;
+}) {
+  const dana = brojRadnihDana(z.datumOd, z.datumDo);
+
+  return (
+    <li>
+      <button
+        onClick={onKlik}
+        aria-expanded={otvoren}
+        className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-slate-50"
+      >
+        <span className="flex min-w-0 items-center gap-1.5">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`shrink-0 text-slate-300 transition-transform ${otvoren ? "rotate-90" : ""}`}
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+          <span className="truncate font-medium text-slate-700">{ime}</span>
+        </span>
+        <span className="shrink-0 text-slate-400">{desno}</span>
+      </button>
+
+      {otvoren && (
+        <div className="ml-[1.4rem] mt-1 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+          <p className="font-medium text-slate-700">
+            {dana} {dana === 1 ? "radni dan" : "radnih dana"}
+          </p>
+          <p className="mt-0.5 text-slate-500">
+            {TIP_LABELE[z.tip]} · {formatDatum(z.datumOd)} – {formatDatum(z.datumDo)}
+          </p>
+          {z.napomena && (
+            <p className="mt-1 text-slate-400">„{z.napomena}"</p>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 export default function KoJeOdsutan() {
   const { zahtevi, zaposleni } = useStore();
+  const [otvoren, setOtvoren] = useState<string | null>(null);
   const danasIso = danas();
   const za7Dana = plusDana(danasIso, 7);
 
@@ -49,14 +110,16 @@ export default function KoJeOdsutan() {
         {danasOdsutni.length === 0 ? (
           <p className="text-sm text-slate-400">Svi su danas na poslu. ✅</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {danasOdsutni.map((z) => (
-              <li key={z.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-700">{ime(z.zaposleniId)}</span>
-                <span className="text-slate-400">
-                  {TIP_LABELE[z.tip]} · do {formatDatum(z.datumDo)}
-                </span>
-              </li>
+              <Stavka
+                key={z.id}
+                z={z}
+                ime={ime(z.zaposleniId)}
+                desno={`${TIP_LABELE[z.tip]} · do ${formatDatum(z.datumDo)}`}
+                otvoren={otvoren === z.id}
+                onKlik={() => setOtvoren(otvoren === z.id ? null : z.id)}
+              />
             ))}
           </ul>
         )}
@@ -79,14 +142,16 @@ export default function KoJeOdsutan() {
         {nadolazeci.length === 0 ? (
           <p className="text-sm text-slate-400">Nema najavljenih odsustava ove nedelje.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {nadolazeci.map((z) => (
-              <li key={z.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-700">{ime(z.zaposleniId)}</span>
-                <span className="text-slate-400">
-                  {TIP_LABELE[z.tip]} · od {formatDatum(z.datumOd)}
-                </span>
-              </li>
+              <Stavka
+                key={z.id}
+                z={z}
+                ime={ime(z.zaposleniId)}
+                desno={`${TIP_LABELE[z.tip]} · od ${formatDatum(z.datumOd)}`}
+                otvoren={otvoren === z.id}
+                onKlik={() => setOtvoren(otvoren === z.id ? null : z.id)}
+              />
             ))}
           </ul>
         )}

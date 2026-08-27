@@ -10,6 +10,7 @@ import ZaposleniLista from "@/components/ZaposleniLista";
 import KalendarPrikaz from "@/components/KalendarPrikaz";
 import KoJeOdsutan from "@/components/KoJeOdsutan";
 import RodjendaniSlave from "@/components/RodjendaniSlave";
+import MojFond from "@/components/MojFond";
 import LoginPage from "@/components/LoginPage";
 import Logo from "@/components/Logo";
 import Korpa from "@/components/Korpa";
@@ -77,6 +78,9 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {/* Lični fond godišnjeg (ne prikazuje se šefu) */}
+        <MojFond />
+
         {/* Rođendani i slave */}
         <RodjendaniSlave />
 
