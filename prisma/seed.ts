@@ -8,9 +8,9 @@ const tim = [
   { ime: "Marko Mijatov", pozicija: "Dizajner", email: "marko.mijatov@baseline.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Milan Kujundžić", pozicija: "Dizajner", email: "milan.kujundzic@baseline.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Boris Šimunek", pozicija: "Dizajner", email: "boris.simunek@baseline.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
-  { ime: "Vladan Kajtez", pozicija: "Dizajner", email: "vladan.katjez@baseline.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
+  { ime: "Vladan Kajtez", pozicija: "Dizajner", email: "vladan.kajtez@baseline.rs", uloga: "dizajner", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Nenad Milićev", pozicija: "Full stack developer", email: "nenad.milicev@baseline.rs", uloga: "frontend", lozinka: "123456", brojDanaGodisnjeg: 20 },
-  { ime: "Ognen Đurasinović", pozicija: "SEO specijalista", email: "ognen.djurasinovic@baseline.rs", uloga: "seo", lozinka: "123456", brojDanaGodisnjeg: 20 },
+  { ime: "Ognjen Đurasinović", pozicija: "SEO specijalista", email: "ognjen.djurasinovic@baseline.rs", uloga: "seo", lozinka: "123456", brojDanaGodisnjeg: 20 },
   { ime: "Sava Marinković", pozicija: "Šef", email: "sava.marinkovic@baseline.rs", uloga: "sef", lozinka: "admin123", brojDanaGodisnjeg: 25 },
 ];
 
