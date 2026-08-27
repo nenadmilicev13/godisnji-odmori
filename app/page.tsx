@@ -88,20 +88,21 @@ export default function Home() {
         <KoJeOdsutan />
 
         {/* Tabovi */}
-        <div className="mb-6 flex gap-1 rounded-xl bg-slate-100 p-1">
+        <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
           <button
             onClick={() => setTab("pregled")}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+            className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition sm:px-4 sm:py-2 ${
               tab === "pregled"
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            Zahtevi za odsustvo
+            <span className="sm:hidden">Zahtevi</span>
+            <span className="hidden sm:inline">Zahtevi za odsustvo</span>
           </button>
           <button
             onClick={() => setTab("kalendar")}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+            className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition sm:px-4 sm:py-2 ${
               tab === "kalendar"
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
@@ -111,7 +112,7 @@ export default function Home() {
           </button>
           <button
             onClick={() => setTab("zaposleni")}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+            className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition sm:px-4 sm:py-2 ${
               tab === "zaposleni"
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
@@ -122,7 +123,7 @@ export default function Home() {
           {admin && (
             <button
               onClick={() => setTab("korpa")}
-              className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`flex-1 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition sm:px-4 sm:py-2 ${
                 tab === "korpa"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"

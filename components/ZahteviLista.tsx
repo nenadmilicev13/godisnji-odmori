@@ -95,7 +95,7 @@ export default function ZahteviLista() {
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 p-4">
+      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200 p-4">
         {filteri.map((f) => (
           <button
             key={f}
@@ -103,7 +103,7 @@ export default function ZahteviLista() {
               setFilter(f);
               setStrana(1);
             }}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition ${
               filter === f
                 ? "bg-brand-600 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"

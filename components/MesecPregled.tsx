@@ -40,6 +40,15 @@ function jednakDan(a: Date, b: Date) {
 function prviDan(ime: string) {
   return ime.split(" ")[0];
 }
+/** Inicijali („Marko Mijatov" -> „MM") — za uske ćelije na telefonu. */
+function inicijali(ime: string) {
+  return ime
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((d) => d[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 export default function MesecPregled() {
   const { zahtevi, zaposleni, trenutniKorisnik, promeniStatus, obrisiZahtev } =
@@ -155,13 +164,17 @@ export default function MesecPregled() {
                     key={z.id}
                     onClick={() => setDetalj(z)}
                     title={`${ime(z.zaposleniId)} — ${TIP_LABELE[z.tip]}`}
-                    className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium ${BOJA[z.status]} hover:brightness-95`}
+                    className={`block w-full truncate rounded px-1 py-1 text-center text-[11px] font-semibold ${BOJA[z.status]} hover:brightness-95 sm:px-1.5 sm:py-0.5 sm:text-left sm:font-medium`}
                   >
-                    {prviDan(ime(z.zaposleniId))}
+                    <span className="sm:hidden">{inicijali(ime(z.zaposleniId))}</span>
+                    <span className="hidden sm:inline">{prviDan(ime(z.zaposleniId))}</span>
                   </button>
                 ))}
                 {ods.length > 3 && (
-                  <div className="px-1.5 text-[11px] text-slate-400">+{ods.length - 3} još</div>
+                  <div className="px-1 text-center text-[11px] text-slate-400 sm:px-1.5 sm:text-left">
+                    +{ods.length - 3}
+                    <span className="hidden sm:inline"> još</span>
+                  </div>
                 )}
               </div>
             </div>

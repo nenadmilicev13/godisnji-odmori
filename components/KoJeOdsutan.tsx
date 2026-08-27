@@ -35,7 +35,7 @@ function Stavka({
       <button
         onClick={onKlik}
         aria-expanded={otvoren}
-        className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-slate-50"
+        className="flex w-full flex-col items-start gap-0.5 rounded-lg px-2 py-2 text-left text-sm transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-1.5"
       >
         <span className="flex min-w-0 items-center gap-1.5">
           <svg
@@ -51,9 +51,9 @@ function Stavka({
           >
             <path d="m9 18 6-6-6-6" />
           </svg>
-          <span className="truncate font-medium text-slate-700">{ime}</span>
+          <span className="font-medium text-slate-700">{ime}</span>
         </span>
-        <span className="shrink-0 text-slate-400">{desno}</span>
+        <span className="ml-[1.4rem] shrink-0 text-slate-400 sm:ml-0">{desno}</span>
       </button>
 
       {otvoren && (
