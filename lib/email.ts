@@ -6,8 +6,9 @@ import { formatDatum } from "./utils";
 
 const FROM = process.env.EMAIL_FROM || "Godišnji odmori <onboarding@resend.dev>";
 
+/** Šalje jedan mejl na jednu adresu. Greške se loguju, ne bacaju. */
 async function posalji(
-  to: string | string[],
+  to: string,
   subject: string,
   html: string,
 ): Promise<void> {
@@ -20,12 +21,27 @@ async function posalji(
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: FROM, to, subject, html }),
+      body: JSON.stringify({ from: FROM, to: [to], subject, html }),
     });
-    if (!res.ok) console.error("Resend greška:", res.status, await res.text());
+    if (!res.ok) {
+      console.error(`Resend greška (${to}):`, res.status, await res.text());
+    }
   } catch (e) {
-    console.error("Email izuzetak:", e);
+    console.error(`Email izuzetak (${to}):`, e);
   }
+}
+
+/**
+ * Šalje isti mejl svakom primaocu ZASEBNO. Tako jedan odbijen primalac ne
+ * obara slanje ostalima (npr. dok domen nije verifikovan u Resend-u), a
+ * adrese primalaca se ne vide jedna drugoj.
+ */
+async function posaljiSvakom(
+  primaoci: string[],
+  subject: string,
+  html: string,
+): Promise<void> {
+  await Promise.all(primaoci.map((to) => posalji(to, subject, html)));
 }
 
 /** Obaveštava admina/šefa da je stigao nov zahtev. */
@@ -37,7 +53,7 @@ export async function mejlNovZahtev(opts: {
   datumDo: string;
 }): Promise<void> {
   if (!opts.adminEmails.length) return;
-  await posalji(
+  await posaljiSvakom(
     opts.adminEmails,
     `Nov zahtev za odsustvo — ${opts.imePodnosioca}`,
     `<p><b>${opts.imePodnosioca}</b> je podneo zahtev za <b>${TIP_LABELE[opts.tip]}</b>.</p>
