@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       uloga: ((body.uloga as Uloga) ?? "ostalo") as string,
       lozinkaHash: await bcrypt.hash(lozinka, 10),
       brojDanaGodisnjeg: Number(body.brojDanaGodisnjeg) || 20,
+      brojDanaSickLeave: Number(body.brojDanaSickLeave) || 5,
     },
   });
   return NextResponse.json({ zaposleni: javniZaposleni(noviz) });

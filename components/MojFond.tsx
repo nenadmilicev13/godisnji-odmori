@@ -40,6 +40,21 @@ export default function MojFond() {
 
   const pct = (n: number) => (fond > 0 ? Math.min(100, (n / fond) * 100) : 0);
 
+  // Sick leave ima svoj, odvojen fond.
+  const sickLeave = zahtevi.filter(
+    (z) =>
+      z.zaposleniId === trenutniKorisnik.id &&
+      z.tip === "sick_leave" &&
+      z.status !== "odbijeno",
+  );
+  const fondSL = trenutniKorisnik.brojDanaSickLeave;
+  const iskorisceniSL = sickLeave.reduce(
+    (s, z) => s + brojRadnihDanaUGodini(z.datumOd, z.datumDo, godina),
+    0,
+  );
+  const preostaloSL = Math.max(0, fondSL - iskorisceniSL);
+  const pctSL = fondSL > 0 ? Math.min(100, (iskorisceniSL / fondSL) * 100) : 0;
+
   return (
     <div className="card mb-8 p-5">
       <div className="mb-4 flex items-center gap-2">
@@ -109,6 +124,27 @@ export default function MojFond() {
             Iskoristio si ceo fond za {godina}.
           </span>
         )}
+      </div>
+
+      {/* Sick leave — odvojen fond */}
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
+            🤒 Sick leave
+          </span>
+          <span className="text-sm text-slate-500">
+            <span className="font-semibold text-slate-800">{iskorisceniSL}</span>{" "}
+            / {fondSL} dana ·{" "}
+            <span className="font-semibold text-slate-800">{preostaloSL}</span>{" "}
+            preostalo
+          </span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-teal-500 transition-all"
+            style={{ width: `${pctSL}%` }}
+          />
+        </div>
       </div>
     </div>
   );

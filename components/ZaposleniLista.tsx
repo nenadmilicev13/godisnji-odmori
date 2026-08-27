@@ -23,6 +23,7 @@ export default function ZaposleniLista() {
   const [email, setEmail] = useState("");
   const [uloga, setUloga] = useState<Uloga>("ostalo");
   const [dani, setDani] = useState(20);
+  const [daniSickLeave, setDaniSickLeave] = useState(5);
   const [greska, setGreska] = useState("");
   const [profil, setProfil] = useState<Zaposleni | null>(null);
 
@@ -38,6 +39,7 @@ export default function ZaposleniLista() {
       email: email.trim(),
       uloga,
       brojDanaGodisnjeg: dani,
+      brojDanaSickLeave: daniSickLeave,
     });
     if (g) return setGreska(g);
     setIme("");
@@ -45,6 +47,7 @@ export default function ZaposleniLista() {
     setEmail("");
     setUloga("ostalo");
     setDani(20);
+    setDaniSickLeave(5);
     setGreska("");
     setOtvoren(false);
   }
@@ -202,16 +205,29 @@ export default function ZaposleniLista() {
               placeholder="ime@firma.rs"
             />
           </div>
-          <div>
-            <label className="label">Broj dana godišnjeg odmora</label>
-            <input
-              type="number"
-              min={0}
-              max={40}
-              className="input"
-              value={dani}
-              onChange={(e) => setDani(Number(e.target.value))}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Dana godišnjeg</label>
+              <input
+                type="number"
+                min={0}
+                max={40}
+                className="input"
+                value={dani}
+                onChange={(e) => setDani(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="label">Dana sick leave-a</label>
+              <input
+                type="number"
+                min={0}
+                max={40}
+                className="input"
+                value={daniSickLeave}
+                onChange={(e) => setDaniSickLeave(Number(e.target.value))}
+              />
+            </div>
           </div>
           {greska && (
             <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">

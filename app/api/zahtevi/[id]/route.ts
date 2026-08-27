@@ -5,8 +5,8 @@ import {
   javniZaposleni,
   javniZahtev,
 } from "@/lib/auth-server";
-import { jeAdmin, trosiFond, StatusZahteva, TipOdsustva } from "@/lib/types";
-import { proveriGodisnjiFond } from "@/lib/utils";
+import { jeAdmin, StatusZahteva, TipOdsustva } from "@/lib/types";
+import { proveriFondZaTip } from "@/lib/utils";
 import { mejlStatus } from "@/lib/email";
 
 export async function PATCH(
@@ -66,12 +66,13 @@ export async function PATCH(
     const javniZahtevi = sviZahtevi.map(javniZahtev);
 
     // Preklapanje dizajnera se NE blokira (šef odlučuje); proverava se samo fond.
-    if (trosiFond(tip as TipOdsustva)) {
+    {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
       if (podnosilac) {
-        const greskaFond = proveriGodisnjiFond(
+        const greskaFond = proveriFondZaTip(
           javniZahtevi,
           podnosilac,
+          tip as TipOdsustva,
           datumOd,
           datumDo,
           zahtev.id,
@@ -108,12 +109,13 @@ export async function PATCH(
 
     // Napomena: preklapanje dizajnera se NE blokira — šef svesno odlučuje.
     // Kontrola godišnjeg fonda pri odobravanju — po godini.
-    if (trosiFond(zahtev.tip as TipOdsustva)) {
+    {
       const podnosilac = sviZaposleni.find((z) => z.id === zahtev.zaposleniId);
       if (podnosilac) {
-        const greskaFond = proveriGodisnjiFond(
+        const greskaFond = proveriFondZaTip(
           sviZahtevi.map(javniZahtev),
           podnosilac,
+          zahtev.tip as TipOdsustva,
           zahtev.datumOd,
           zahtev.datumDo,
           zahtev.id,

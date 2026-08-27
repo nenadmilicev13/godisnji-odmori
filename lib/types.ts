@@ -1,5 +1,6 @@
 export type TipOdsustva =
   | "godisnji"
+  | "sick_leave"
   | "bolovanje"
   | "slobodan_dan"
   | "placeno_odsustvo"
@@ -27,6 +28,7 @@ export interface Zaposleni {
   uloga: Uloga;
   lozinka?: string; // klijentski demo-login (nije prava sigurnost)
   brojDanaGodisnjeg: number; // ukupan godišnji fond dana
+  brojDanaSickLeave: number; // fond sick leave dana, podrazumevano 5
   rodjendan?: string | null; // yyyy-mm-dd
   slava?: string | null;
   slika?: string | null; // profilna slika (data URL)
@@ -44,8 +46,29 @@ export function trosiFond(tip: TipOdsustva): boolean {
   return TIPOVI_FONDA.includes(tip);
 }
 
+/** Polje zaposlenog u kojem stoji fond za dati tip odsustva. */
+export type PoljeFonda = "brojDanaGodisnjeg" | "brojDanaSickLeave";
+
+export const FOND_POLJE: Partial<Record<TipOdsustva, PoljeFonda>> = {
+  godisnji: "brojDanaGodisnjeg",
+  sick_leave: "brojDanaSickLeave",
+};
+
+/** Koliko dana fonda zaposleni ima za dati tip; null ako tip nema fond. */
+export function fondZaTip(
+  z: { brojDanaGodisnjeg: number; brojDanaSickLeave: number },
+  tip: TipOdsustva,
+): number | null {
+  const polje = FOND_POLJE[tip];
+  return polje ? z[polje] : null;
+}
+
 /** Tipovi koje zaposleni može da izabere pri unosu (admin dodatno „nagradni_dan"). */
-export const TIPOVI_ZA_UNOS: TipOdsustva[] = ["godisnji", "bolovanje"];
+export const TIPOVI_ZA_UNOS: TipOdsustva[] = [
+  "godisnji",
+  "sick_leave",
+  "bolovanje",
+];
 
 export function tipoviZaUnos(admin: boolean): TipOdsustva[] {
   return admin ? [...TIPOVI_ZA_UNOS, "nagradni_dan"] : TIPOVI_ZA_UNOS;
@@ -64,6 +87,7 @@ export interface ZahtevZaOdsustvo {
 
 export const TIP_LABELE: Record<TipOdsustva, string> = {
   godisnji: "Godišnji odmor",
+  sick_leave: "Sick leave",
   bolovanje: "Bolovanje",
   slobodan_dan: "Slobodan dan",
   placeno_odsustvo: "Plaćeno odsustvo",

@@ -19,6 +19,7 @@ model Zaposleni {
   uloga             String // dizajner | frontend | seo | sef | ostalo
   lozinkaHash       String
   brojDanaGodisnjeg Int      @default(20)
+  brojDanaSickLeave Int      @default(5)
   rodjendan         String? // yyyy-mm-dd (godina nebitna)
   slava             String? // yyyy-mm-dd
   slika             String? // profilna slika kao data URL (mali resize)

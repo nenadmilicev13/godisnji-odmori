@@ -5,10 +5,10 @@ import {
   javniZaposleni,
   javniZahtev,
 } from "@/lib/auth-server";
-import { jeAdmin, trosiFond } from "@/lib/types";
+import { jeAdmin } from "@/lib/types";
 import {
   pronadjiKonfliktDizajnera,
-  proveriGodisnjiFond,
+  proveriFondZaTip,
 } from "@/lib/utils";
 import { mejlNovZahtev } from "@/lib/email";
 import { TipOdsustva, TIP_LABELE } from "@/lib/types";
@@ -86,13 +86,14 @@ export async function POST(req: NextRequest) {
     { zaposleniId, datumOd, datumDo },
   );
 
-  // 2) Kontrola godišnjeg fonda — po kalendarskoj godini.
-  if (trosiFond(tip as TipOdsustva)) {
+  // 2) Kontrola fonda (godišnji i bolovanje) — po kalendarskoj godini.
+  {
     const podnosilac = sviZaposleni.find((z) => z.id === zaposleniId);
     if (podnosilac) {
-      const greskaFond = proveriGodisnjiFond(
+      const greskaFond = proveriFondZaTip(
         javniZahtevi,
         podnosilac,
+        tip as TipOdsustva,
         datumOd,
         datumDo,
       );

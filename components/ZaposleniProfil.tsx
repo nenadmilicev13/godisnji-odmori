@@ -15,6 +15,7 @@ import {
   brojRadnihDana,
   formatDatum,
   iskorisceniGodisnjiUGodini,
+  iskorisceniPoTipuUGodini,
 } from "@/lib/utils";
 import Badge from "./Badge";
 
@@ -147,6 +148,12 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
   const [godina, setGodina] = useState(new Date().getFullYear());
   const iskorisceno = iskorisceniGodisnjiUGodini(zahtevi, z.id, godina);
   const preostalo = z.brojDanaGodisnjeg - iskorisceno;
+  const iskorisceniSL = iskorisceniPoTipuUGodini(zahtevi, z.id, godina, "sick_leave");
+  const preostaloSL = z.brojDanaSickLeave - iskorisceniSL;
+  const procenatSL = Math.min(
+    100,
+    Math.round((iskorisceniSL / z.brojDanaSickLeave) * 100) || 0,
+  );
   const procenat = Math.min(
     100,
     Math.round((iskorisceno / z.brojDanaGodisnjeg) * 100) || 0,
@@ -263,6 +270,25 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             <p className="mt-1.5 text-xs text-slate-400">
               Preostalo <span className="font-medium text-slate-600">{preostalo}</span> dana godišnjeg odmora
             </p>
+
+            {/* Sick leave — odvojen fond */}
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="mb-1.5 flex justify-between text-sm">
+                <span className="text-slate-500">🤒 Sick leave</span>
+                <span className="font-medium text-slate-700">
+                  {iskorisceniSL} / {z.brojDanaSickLeave} dana
+                </span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={`h-full rounded-full transition-all ${preostaloSL < 0 ? "bg-rose-500" : "bg-teal-500"}`}
+                  style={{ width: `${procenatSL}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">
+                Preostalo <span className="font-medium text-slate-600">{preostaloSL}</span> dana sick leave-a
+              </p>
+            </div>
 
             {/* Pregled odsustava kroz izabranu godinu */}
             <div className="mt-4 border-t border-slate-100 pt-3">

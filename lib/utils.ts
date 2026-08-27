@@ -1,4 +1,12 @@
-import { StatusZahteva, Zaposleni, ZahtevZaOdsustvo, trosiFond } from "./types";
+import {
+  StatusZahteva,
+  TipOdsustva,
+  TIP_LABELE,
+  Zaposleni,
+  ZahtevZaOdsustvo,
+  fondZaTip,
+  trosiFond,
+} from "./types";
 import { jePraznik } from "./praznici";
 
 /** Generiše jednostavan jedinstveni ID bez eksternih zavisnosti. */
@@ -146,6 +154,62 @@ export function proveriGodisnjiFond(
     if (iskorisceno + trazeno > podnosilac.brojDanaGodisnjeg) {
       const preostalo = podnosilac.brojDanaGodisnjeg - iskorisceno;
       return `Prekoračen fond za ${g}: traženo ${trazeno}, a preostalo je ${preostalo} od ${podnosilac.brojDanaGodisnjeg} dana.`;
+    }
+  }
+  return null;
+}
+
+/** Zauzeti dani konkretnog tipa odsustva u datoj godini (na čekanju + odobreni). */
+export function iskorisceniPoTipuUGodini(
+  zahtevi: ZahtevZaOdsustvo[],
+  zaposleniId: string,
+  godina: number,
+  tip: TipOdsustva,
+  ignorirajId?: string,
+): number {
+  return zahtevi
+    .filter(
+      (z) =>
+        z.zaposleniId === zaposleniId &&
+        z.tip === tip &&
+        z.status !== "odbijeno" &&
+        z.id !== ignorirajId,
+    )
+    .reduce((s, z) => s + brojRadnihDanaUGodini(z.datumOd, z.datumDo, godina), 0);
+}
+
+/**
+ * Provera fonda za bilo koji tip koji ga ima (godišnji, bolovanje). Vraća
+ * poruku greške ako termin prekoračuje fond u nekoj od dodirnutih godina,
+ * ili null ako je sve u redu (uključujući tipove bez fonda).
+ */
+export function proveriFondZaTip(
+  zahtevi: ZahtevZaOdsustvo[],
+  podnosilac: { id: string; brojDanaGodisnjeg: number; brojDanaSickLeave: number },
+  tip: TipOdsustva,
+  datumOd: string,
+  datumDo: string,
+  ignorirajId?: string,
+): string | null {
+  const fond = fondZaTip(podnosilac, tip);
+  if (fond === null) return null;
+
+  const g1 = Number(datumOd.slice(0, 4));
+  const g2 = Number(datumDo.slice(0, 4));
+  const godine = g1 === g2 ? [g1] : [g1, g2];
+  for (const g of godine) {
+    const trazeno = brojRadnihDanaUGodini(datumOd, datumDo, g);
+    if (trazeno === 0) continue;
+    const iskorisceno = iskorisceniPoTipuUGodini(
+      zahtevi,
+      podnosilac.id,
+      g,
+      tip,
+      ignorirajId,
+    );
+    if (iskorisceno + trazeno > fond) {
+      const preostalo = fond - iskorisceno;
+      return `Prekoračen fond (${TIP_LABELE[tip]}) za ${g}: traženo ${trazeno}, a preostalo je ${preostalo} od ${fond} dana.`;
     }
   }
   return null;

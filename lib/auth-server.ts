@@ -16,6 +16,7 @@ type ZaposleniRed = {
   email: string;
   uloga: string;
   brojDanaGodisnjeg: number;
+  brojDanaSickLeave: number;
   rodjendan?: string | null;
   slava?: string | null;
   slika?: string | null;
@@ -31,6 +32,7 @@ export function javniZaposleni(z: ZaposleniRed): Zaposleni {
     email: z.email,
     uloga: z.uloga as Zaposleni["uloga"],
     brojDanaGodisnjeg: z.brojDanaGodisnjeg,
+    brojDanaSickLeave: z.brojDanaSickLeave ?? 5,
     rodjendan: z.rodjendan ?? null,
     slava: z.slava ?? null,
     slika: z.slika ?? null,
