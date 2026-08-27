@@ -1,16 +1,25 @@
 import { TipOdsustva, TIP_LABELE } from "./types";
-import { formatDatum } from "./utils";
+import { brojRadnihDana, formatDatum } from "./utils";
 
 // Slanje mejlova preko Resend API-ja. Best-effort: ako RESEND_API_KEY nije
 // postavljen ili dođe do greške, aplikacija nastavlja normalno (bez mejla).
 
 const FROM = process.env.EMAIL_FROM || "Godišnji odmori <onboarding@resend.dev>";
 
+/** Adresa aplikacije za dugme u mejlu. */
+const APP_URL =
+  process.env.APP_URL || "https://godisnji-odmori-mauve.vercel.app";
+
+const BRAND = "#4f46e5";
+const FONT =
+  "-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+
 /** Šalje jedan mejl na jednu adresu. Greške se loguju, ne bacaju. */
 async function posalji(
   to: string,
   subject: string,
   html: string,
+  text: string,
 ): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return; // mejlovi isključeni dok ključ nije postavljen
@@ -21,7 +30,7 @@ async function posalji(
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+      body: JSON.stringify({ from: FROM, to: [to], subject, html, text }),
     });
     if (!res.ok) {
       console.error(`Resend greška (${to}):`, res.status, await res.text());
@@ -40,8 +49,102 @@ async function posaljiSvakom(
   primaoci: string[],
   subject: string,
   html: string,
+  text: string,
 ): Promise<void> {
-  await Promise.all(primaoci.map((to) => posalji(to, subject, html)));
+  await Promise.all(primaoci.map((to) => posalji(to, subject, html, text)));
+}
+
+/** Sprečava da ime ili napomena razbiju HTML. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+type Red = { oznaka: string; vrednost: string };
+
+/** Tabela „oznaka → vrednost" unutar mejla. */
+function detalji(redovi: Red[]): string {
+  const celije = redovi
+    .map((r, i) => {
+      const linija = i ? "border-top:1px solid #e2e8f0;" : "";
+      return `<tr>
+      <td style="padding:12px 16px;${linija}font:400 13px/1.4 ${FONT};color:#64748b;width:40%;">${esc(r.oznaka)}</td>
+      <td style="padding:12px 16px;${linija}font:600 14px/1.4 ${FONT};color:#0f172a;text-align:right;">${esc(r.vrednost)}</td>
+    </tr>`;
+    })
+    .join("");
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">${celije}</table>`;
+}
+
+/** Dugme koje radi i u Outlook-u (bez CSS-a koji se ignoriše). */
+function dugme(tekst: string, url: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 4px;">
+    <tr>
+      <td style="border-radius:8px;background:${BRAND};">
+        <a href="${url}" target="_blank" style="display:inline-block;padding:12px 24px;border-radius:8px;font:600 14px/1 ${FONT};color:#ffffff;text-decoration:none;">${esc(tekst)}</a>
+      </td>
+    </tr>
+  </table>`;
+}
+
+/** Zajednički okvir mejla — zaglavlje, sadržaj, podnožje. */
+function omotac(opts: {
+  naslov: string;
+  pretekst: string;
+  telo: string;
+  akcenat?: string;
+}): string {
+  const akcenat = opts.akcenat ?? BRAND;
+  return `<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(opts.naslov)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(opts.pretekst)}</div>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f1f5f9;padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="height:4px;background:${akcenat};font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px 8px;">
+              <p style="margin:0 0 4px;font:600 12px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;">Baseline &middot; Godišnji odmori</p>
+              <h1 style="margin:0;font:700 21px/1.3 ${FONT};color:#0f172a;">${esc(opts.naslov)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 32px 28px;">${opts.telo}</td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px;border-top:1px solid #f1f5f9;">
+              <p style="margin:0;font:400 12px/1.5 ${FONT};color:#94a3b8;">Automatska poruka iz aplikacije za godišnje odmore. Na ovaj mejl nije potrebno odgovarati.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/** Stil pasusa u telu mejla. */
+const P = `style="margin:0 0 12px;font:400 15px/1.6 ${FONT};color:#334155;"`;
+
+/** Period u čitljivom obliku (jedan dan se ne ponavlja dvaput). */
+function period(datumOd: string, datumDo: string): string {
+  return datumOd === datumDo
+    ? formatDatum(datumOd)
+    : `${formatDatum(datumOd)} – ${formatDatum(datumDo)}`;
 }
 
 /** Obaveštava admina/šefa da je stigao nov zahtev. */
@@ -51,14 +154,51 @@ export async function mejlNovZahtev(opts: {
   tip: TipOdsustva;
   datumOd: string;
   datumDo: string;
+  napomena?: string;
 }): Promise<void> {
   if (!opts.adminEmails.length) return;
+
+  const dana = brojRadnihDana(opts.datumOd, opts.datumDo);
+  const kada = period(opts.datumOd, opts.datumDo);
+
+  const redovi: Red[] = [
+    { oznaka: "Zaposleni", vrednost: opts.imePodnosioca },
+    { oznaka: "Tip odsustva", vrednost: TIP_LABELE[opts.tip] },
+    { oznaka: "Period", vrednost: kada },
+    { oznaka: "Radnih dana", vrednost: String(dana) },
+  ];
+  if (opts.napomena && opts.napomena.trim()) {
+    redovi.push({ oznaka: "Napomena", vrednost: opts.napomena.trim() });
+  }
+
+  const telo = `<p ${P}><b style="color:#0f172a;">${esc(opts.imePodnosioca)}</b> je podneo nov zahtev za odsustvo i čeka tvoje odobrenje.</p>
+    ${detalji(redovi)}
+    ${dugme("Otvori zahtev", APP_URL)}`;
+
+  const text = [
+    `${opts.imePodnosioca} je podneo nov zahtev za odsustvo.`,
+    ``,
+    `Tip: ${TIP_LABELE[opts.tip]}`,
+    `Period: ${kada}`,
+    `Radnih dana: ${dana}`,
+    opts.napomena && opts.napomena.trim()
+      ? `Napomena: ${opts.napomena.trim()}`
+      : "",
+    ``,
+    `Odobri ili odbij ovde: ${APP_URL}`,
+  ]
+    .filter((r, i) => r !== "" || i > 0)
+    .join("\n");
+
   await posaljiSvakom(
     opts.adminEmails,
     `Nov zahtev za odsustvo — ${opts.imePodnosioca}`,
-    `<p><b>${opts.imePodnosioca}</b> je podneo zahtev za <b>${TIP_LABELE[opts.tip]}</b>.</p>
-     <p>Period: <b>${formatDatum(opts.datumOd)} – ${formatDatum(opts.datumDo)}</b>.</p>
-     <p>Prijavite se u aplikaciju da odobrite ili odbijete zahtev.</p>`,
+    omotac({
+      naslov: "Nov zahtev za odsustvo",
+      pretekst: `${opts.imePodnosioca} — ${TIP_LABELE[opts.tip]}, ${kada}`,
+      telo,
+    }),
+    text,
   );
 }
 
@@ -69,13 +209,51 @@ export async function mejlStatus(opts: {
   odobreno: boolean;
   datumOd: string;
   datumDo: string;
+  tip?: TipOdsustva;
 }): Promise<void> {
   if (!opts.email) return;
-  const rec = opts.odobreno ? "odobren ✅" : "odbijen";
+
+  const dana = brojRadnihDana(opts.datumOd, opts.datumDo);
+  const kada = period(opts.datumOd, opts.datumDo);
+  const akcenat = opts.odobreno ? "#10b981" : "#f43f5e";
+  const rec = opts.odobreno ? "odobren" : "odbijen";
+
+  const redovi: Red[] = [
+    { oznaka: "Status", vrednost: opts.odobreno ? "Odobreno" : "Odbijeno" },
+    ...(opts.tip
+      ? [{ oznaka: "Tip odsustva", vrednost: TIP_LABELE[opts.tip] }]
+      : []),
+    { oznaka: "Period", vrednost: kada },
+    { oznaka: "Radnih dana", vrednost: String(dana) },
+  ];
+
+  const uvod = opts.odobreno
+    ? `Zdravo ${esc(opts.ime)}, tvoj zahtev za odsustvo je <b style="color:#059669;">odobren</b>. Prijatan odmor!`
+    : `Zdravo ${esc(opts.ime)}, tvoj zahtev za odsustvo je <b style="color:#e11d48;">odbijen</b>. Za detalje se obrati šefu.`;
+
+  const telo = `<p ${P}>${uvod}</p>
+    ${detalji(redovi)}
+    ${dugme("Pogledaj u aplikaciji", APP_URL)}`;
+
+  const text = [
+    `Zdravo ${opts.ime},`,
+    ``,
+    `Tvoj zahtev za odsustvo je ${rec}.`,
+    `Period: ${kada}`,
+    `Radnih dana: ${dana}`,
+    ``,
+    `Detalji: ${APP_URL}`,
+  ].join("\n");
+
   await posalji(
     opts.email,
-    `Vaš zahtev za odsustvo je ${rec}`,
-    `<p>Zdravo ${opts.ime},</p>
-     <p>Vaš zahtev za odsustvo (<b>${formatDatum(opts.datumOd)} – ${formatDatum(opts.datumDo)}</b>) je <b>${rec}</b>.</p>`,
+    `Zahtev za odsustvo je ${rec}`,
+    omotac({
+      naslov: opts.odobreno ? "Zahtev je odobren" : "Zahtev je odbijen",
+      pretekst: `${kada} · ${dana} radnih dana`,
+      telo,
+      akcenat,
+    }),
+    text,
   );
 }

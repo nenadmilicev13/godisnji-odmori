@@ -153,6 +153,7 @@ export async function PATCH(
         odobreno: odobren,
         datumOd: azuriran.datumOd,
         datumDo: azuriran.datumDo,
+        tip: azuriran.tip as TipOdsustva,
       });
     }
   }

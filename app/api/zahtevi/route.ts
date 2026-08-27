@@ -129,6 +129,7 @@ export async function POST(req: NextRequest) {
     tip: tip as TipOdsustva,
     datumOd,
     datumDo,
+    napomena,
   });
 
   return NextResponse.json({ zahtev: javniZahtev(noviz) });
