@@ -269,3 +269,103 @@ export async function mejlStatus(opts: {
     text,
   );
 }
+
+/** Jedan red u nedeljnom pregledu. */
+export type StavkaPregleda = {
+  ime: string;
+  tip: TipOdsustva;
+  datumOd: string;
+  datumDo: string;
+};
+
+/** Ponedeljkom: ko je sve odsutan ove nedelje — ide celom timu. */
+export async function mejlNedeljniPregled(opts: {
+  primaoci: string[];
+  odDatum: string;
+  doDatum: string;
+  stavke: StavkaPregleda[];
+}): Promise<void> {
+  if (!opts.primaoci.length || !opts.stavke.length) return;
+
+  const opseg = `${formatDatum(opts.odDatum)} – ${formatDatum(opts.doDatum)}`;
+  const redovi: Red[] = opts.stavke.map((s) => ({
+    oznaka: s.ime,
+    vrednost: `${TIP_LABELE[s.tip]} · ${period(s.datumOd, s.datumDo)}`,
+  }));
+
+  const telo = `<p ${P}>Pregled odsustava za nedelju <b style="color:#0f172a;">${esc(opseg)}</b>.</p>
+    ${detalji(redovi)}
+    ${dugme("Otvori kalendar", APP_URL)}`;
+
+  const text = [
+    `Odsustva za nedelju ${opseg}:`,
+    ``,
+    ...opts.stavke.map(
+      (s) => `- ${s.ime}: ${TIP_LABELE[s.tip]}, ${period(s.datumOd, s.datumDo)}`,
+    ),
+    ``,
+    `Kalendar: ${APP_URL}`,
+  ].join("\n");
+
+  const html = omotac({
+    naslov: "Ko je odsutan ove nedelje",
+    pretekst: `${opts.stavke.length} odsustava · ${opseg}`,
+    telo,
+  });
+
+  await posaljiSvakom(
+    opts.primaoci.map((email) => ({ email, html, text })),
+    `Odsustva ove nedelje — ${opseg}`,
+  );
+}
+
+/** Podsetnik šefu da zahtevi predugo stoje na čekanju. */
+export async function mejlPodsetnikNaCekanju(opts: {
+  admini: { email: string; odlukaUrl?: string }[];
+  stavke: StavkaPregleda[];
+}): Promise<void> {
+  if (!opts.admini.length || !opts.stavke.length) return;
+
+  const koliko = opts.stavke.length;
+  const redovi: Red[] = opts.stavke.map((s) => ({
+    oznaka: s.ime,
+    vrednost: `${TIP_LABELE[s.tip]} · ${period(s.datumOd, s.datumDo)}`,
+  }));
+
+  const uvodHtml = `<p ${P}>${
+    koliko === 1
+      ? "Jedan zahtev čeka tvoju odluku već nekoliko dana."
+      : `${koliko} zahteva čekaju tvoju odluku već nekoliko dana.`
+  }</p>
+    ${detalji(redovi)}`;
+
+  const text = [
+    koliko === 1
+      ? "Jedan zahtev čeka tvoju odluku:"
+      : `${koliko} zahteva čekaju tvoju odluku:`,
+    ``,
+    ...opts.stavke.map(
+      (s) => `- ${s.ime}: ${TIP_LABELE[s.tip]}, ${period(s.datumOd, s.datumDo)}`,
+    ),
+    ``,
+    `Odluči ovde: ${APP_URL}`,
+  ].join("\n");
+
+  await posaljiSvakom(
+    opts.admini.map((a) => ({
+      email: a.email,
+      html: omotac({
+        naslov: koliko === 1 ? "Zahtev čeka odluku" : "Zahtevi čekaju odluku",
+        pretekst: `${koliko} na čekanju`,
+        telo: `${uvodHtml}${dugme(
+          koliko === 1 ? "Odobri ili odbij" : "Otvori zahteve",
+          a.odlukaUrl ?? APP_URL,
+        )}`,
+      }),
+      text: a.odlukaUrl ? text.replace(APP_URL, a.odlukaUrl) : text,
+    })),
+    koliko === 1
+      ? "Podsetnik: zahtev čeka odluku"
+      : `Podsetnik: ${koliko} zahteva čekaju odluku`,
+  );
+}
