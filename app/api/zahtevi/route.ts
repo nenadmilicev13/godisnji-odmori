@@ -11,6 +11,7 @@ import {
   proveriFondZaTip,
 } from "@/lib/utils";
 import { mejlNovZahtev } from "@/lib/email";
+import { napraviOdlukaToken } from "@/lib/odluka-token";
 import { TipOdsustva, TIP_LABELE } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
@@ -123,8 +124,21 @@ export async function POST(req: NextRequest) {
   }
 
   // Email šefovima (best-effort — uspavano dok nema RESEND_API_KEY).
+  // Svaki admin dobija svoj potpisan link za odlučivanje direktno iz mejla.
+  const osnova =
+    process.env.APP_URL || new URL(req.url).origin;
+  const primaoci = await Promise.all(
+    admini.map(async (a) => ({
+      email: a.email,
+      odlukaUrl:
+        status === "na_cekanju"
+          ? `${osnova}/odluka?t=${await napraviOdlukaToken({ zid: noviz.id, aid: a.id })}`
+          : undefined,
+    })),
+  );
+
   await mejlNovZahtev({
-    adminEmails: admini.map((z) => z.email),
+    admini: primaoci,
     imePodnosioca: podnosilac?.ime ?? "Zaposleni",
     tip: tip as TipOdsustva,
     datumOd,

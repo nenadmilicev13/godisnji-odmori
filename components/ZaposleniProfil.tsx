@@ -16,6 +16,7 @@ import {
   formatDatum,
   iskorisceniGodisnjiUGodini,
   iskorisceniPoTipuUGodini,
+  preneseniDani,
 } from "@/lib/utils";
 import Badge from "./Badge";
 
@@ -32,7 +33,8 @@ function formatDanMesec(iso: string | null | undefined): string {
 }
 
 export default function ZaposleniProfil({ zaposleni: z }: Props) {
-  const { zahtevi, trenutniKorisnik, azurirajProfil, promeniLozinku } = useStore();
+  const { zahtevi, trenutniKorisnik, kalendarToken, azurirajProfil, promeniLozinku } =
+    useStore();
 
   const jeVlasnik = trenutniKorisnik?.id === z.id;
   const mogeIzmena = jeAdmin(trenutniKorisnik) || jeVlasnik;
@@ -46,6 +48,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
   const [lozinkaPoruka, setLozinkaPoruka] = useState("");
   const [lozinkaOk, setLozinkaOk] = useState(false);
   const [cuvaLozinku, setCuvaLozinku] = useState(false);
+  const [linkKopiran, setLinkKopiran] = useState(false);
 
   async function sacuvajLozinku() {
     if (novaLozinka.length < 6) {
@@ -147,7 +150,14 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
 
   const [godina, setGodina] = useState(new Date().getFullYear());
   const iskorisceno = iskorisceniGodisnjiUGodini(zahtevi, z.id, godina);
-  const preostalo = z.brojDanaGodisnjeg - iskorisceno;
+  const icsLink =
+    typeof window === "undefined"
+      ? ""
+      : `${window.location.origin}/api/kalendar/${z.id}?t=${kalendarToken ?? ""}`;
+
+  const preneseno = preneseniDani(zahtevi, z, godina);
+  const fondGodisnji = z.brojDanaGodisnjeg + preneseno;
+  const preostalo = fondGodisnji - iskorisceno;
   const iskorisceniSL = iskorisceniPoTipuUGodini(zahtevi, z.id, godina, "sick_leave");
   const preostaloSL = z.brojDanaSickLeave - iskorisceniSL;
   const procenatSL = Math.min(
@@ -156,7 +166,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
   );
   const procenat = Math.min(
     100,
-    Math.round((iskorisceno / z.brojDanaGodisnjeg) * 100) || 0,
+    Math.round((iskorisceno / fondGodisnji) * 100) || 0,
   );
 
   const naCekanju = moji.filter((r) => r.status === "na_cekanju").length;
@@ -258,7 +268,7 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             <div className="mb-1.5 flex justify-between text-sm">
               <span className="text-slate-500">Iskorišćeno</span>
               <span className="font-medium text-slate-700">
-                {iskorisceno} / {z.brojDanaGodisnjeg} dana
+                {iskorisceno} / {fondGodisnji} dana
               </span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
@@ -269,6 +279,11 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             </div>
             <p className="mt-1.5 text-xs text-slate-400">
               Preostalo <span className="font-medium text-slate-600">{preostalo}</span> dana godišnjeg odmora
+              {preneseno > 0 && (
+                <span className="text-brand-600">
+                  {" "}· uključeno {preneseno} prenesenih iz {godina - 1} (do 30.06.)
+                </span>
+              )}
             </p>
 
             {/* Sick leave — odvojen fond */}
@@ -410,7 +425,42 @@ export default function ZaposleniProfil({ zaposleni: z }: Props) {
             )}
           </div>
 
-    {/* Lozinka */}
+          {/* Pretplata na kalendar (.ics) — samo sopstveni profil */}
+          {jeVlasnik && kalendarToken && (
+            <div className="rounded-xl border border-slate-200 p-4">
+              <h4 className="text-sm font-semibold text-slate-700">
+                📅 Odsustva u tvom kalendaru
+              </h4>
+              <p className="mt-1 text-xs text-slate-500">
+                Dodaj ovaj link u Google Calendar (Other calendars → From URL) i
+                odobrena odsustva celog tima će ti se prikazivati među sastancima.
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  readOnly
+                  value={icsLink}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="input h-9 flex-1 truncate py-1 text-xs"
+                />
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(icsLink);
+                      setLinkKopiran(true);
+                      setTimeout(() => setLinkKopiran(false), 2000);
+                    } catch {
+                      setLinkKopiran(false);
+                    }
+                  }}
+                  className="btn-ghost shrink-0 px-3 py-1.5 text-sm"
+                >
+                  {linkKopiran ? "Kopirano ✓" : "Kopiraj"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Lozinka */}
           {mogeIzmena && (
             <div className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">

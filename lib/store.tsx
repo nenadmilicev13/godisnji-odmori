@@ -15,6 +15,7 @@ interface StoreContext {
   zaposleni: Zaposleni[];
   zahtevi: ZahtevZaOdsustvo[];
   trenutniKorisnik: Zaposleni | null;
+  kalendarToken: string | null;
   ucitano: boolean;
   prijava: (email: string, lozinka: string) => Promise<string | null>;
   odjava: () => Promise<void>;
@@ -72,6 +73,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [zaposleni, setZaposleni] = useState<Zaposleni[]>([]);
   const [zahtevi, setZahtevi] = useState<ZahtevZaOdsustvo[]>([]);
   const [trenutniKorisnik, setKorisnik] = useState<Zaposleni | null>(null);
+  const [kalendarToken, setKalendarToken] = useState<string | null>(null);
   const [ucitano, setUcitano] = useState(false);
   const [nedavnoObrisan, setNedavnoObrisan] = useState<string | null>(null);
   const undoTajmer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,8 +103,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const res = await fetch("/api/me");
-        const korisnik = res.ok ? (await res.json()).korisnik : null;
+        const telo = res.ok ? await res.json() : null;
+        const korisnik = telo?.korisnik ?? null;
         setKorisnik(korisnik);
+        setKalendarToken(telo?.kalendarToken ?? null);
         if (korisnik) await Promise.all([ucitajPodatke(), ucitajNotifikacije()]);
       } finally {
         setUcitano(true);
@@ -129,6 +133,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const greska = await greskaIz(res);
       if (greska) return greska;
       setKorisnik((await res.json()).korisnik);
+      fetch("/api/me")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((t) => setKalendarToken(t?.kalendarToken ?? null))
+        .catch(() => {});
       await Promise.all([ucitajPodatke(), ucitajNotifikacije()]);
       return null;
     },
@@ -138,6 +146,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const odjava = useCallback(async () => {
     await fetch("/api/logout", { method: "POST" });
     setKorisnik(null);
+    setKalendarToken(null);
     setZaposleni([]);
     setZahtevi([]);
     setNotifikacije([]);
@@ -304,6 +313,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       zaposleni,
       zahtevi,
       trenutniKorisnik,
+      kalendarToken,
       ucitano,
       prijava,
       odjava,
@@ -327,6 +337,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       zaposleni,
       zahtevi,
       trenutniKorisnik,
+      kalendarToken,
       ucitano,
       prijava,
       odjava,

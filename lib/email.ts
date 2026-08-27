@@ -46,12 +46,12 @@ async function posalji(
  * adrese primalaca se ne vide jedna drugoj.
  */
 async function posaljiSvakom(
-  primaoci: string[],
+  primaoci: { email: string; html: string; text: string }[],
   subject: string,
-  html: string,
-  text: string,
 ): Promise<void> {
-  await Promise.all(primaoci.map((to) => posalji(to, subject, html, text)));
+  await Promise.all(
+    primaoci.map((p) => posalji(p.email, subject, p.html, p.text)),
+  );
 }
 
 /** Sprečava da ime ili napomena razbiju HTML. */
@@ -149,14 +149,15 @@ function period(datumOd: string, datumDo: string): string {
 
 /** Obaveštava admina/šefa da je stigao nov zahtev. */
 export async function mejlNovZahtev(opts: {
-  adminEmails: string[];
+  /** Svaki admin dobija svoj link za odlučivanje (token je vezan za njega). */
+  admini: { email: string; odlukaUrl?: string }[];
   imePodnosioca: string;
   tip: TipOdsustva;
   datumOd: string;
   datumDo: string;
   napomena?: string;
 }): Promise<void> {
-  if (!opts.adminEmails.length) return;
+  if (!opts.admini.length) return;
 
   const dana = brojRadnihDana(opts.datumOd, opts.datumDo);
   const kada = period(opts.datumOd, opts.datumDo);
@@ -171,9 +172,8 @@ export async function mejlNovZahtev(opts: {
     redovi.push({ oznaka: "Napomena", vrednost: opts.napomena.trim() });
   }
 
-  const telo = `<p ${P}><b style="color:#0f172a;">${esc(opts.imePodnosioca)}</b> je podneo nov zahtev za odsustvo i čeka tvoje odobrenje.</p>
-    ${detalji(redovi)}
-    ${dugme("Otvori zahtev", APP_URL)}`;
+  const uvodHtml = `<p ${P}><b style="color:#0f172a;">${esc(opts.imePodnosioca)}</b> je podneo nov zahtev za odsustvo i čeka tvoje odobrenje.</p>
+    ${detalji(redovi)}`;
 
   const text = [
     `${opts.imePodnosioca} je podneo nov zahtev za odsustvo.`,
@@ -190,15 +190,27 @@ export async function mejlNovZahtev(opts: {
     .filter((r, i) => r !== "" || i > 0)
     .join("\n");
 
+  const primaoci = opts.admini.map((a) => {
+    const telo = a.odlukaUrl
+      ? `${uvodHtml}${dugme("Odobri ili odbij", a.odlukaUrl)}`
+      : `${uvodHtml}${dugme("Otvori zahtev", APP_URL)}`;
+    const tekst = a.odlukaUrl
+      ? text.replace(`Odobri ili odbij ovde: ${APP_URL}`, `Odobri ili odbij ovde: ${a.odlukaUrl}`)
+      : text;
+    return {
+      email: a.email,
+      html: omotac({
+        naslov: "Nov zahtev za odsustvo",
+        pretekst: `${opts.imePodnosioca} — ${TIP_LABELE[opts.tip]}, ${kada}`,
+        telo,
+      }),
+      text: tekst,
+    };
+  });
+
   await posaljiSvakom(
-    opts.adminEmails,
+    primaoci,
     `Nov zahtev za odsustvo — ${opts.imePodnosioca}`,
-    omotac({
-      naslov: "Nov zahtev za odsustvo",
-      pretekst: `${opts.imePodnosioca} — ${TIP_LABELE[opts.tip]}, ${kada}`,
-      telo,
-    }),
-    text,
   );
 }
 

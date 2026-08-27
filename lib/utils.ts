@@ -178,6 +178,53 @@ export function iskorisceniPoTipuUGodini(
     .reduce((s, z) => s + brojRadnihDanaUGodini(z.datumOd, z.datumDo, godina), 0);
 }
 
+/** Poslednji dan do kog se preneseni dani smeju iskoristiti (30. jun). */
+export const PRENOS_ROK_MESEC_DAN = "-06-30";
+
+/**
+ * Dani iz prethodne godine koji se prenose u godinu `godina`.
+ *
+ * Po Zakonu o radu neiskorišćeni godišnji se koristi do 30. juna naredne
+ * godine. Prenos se računa SAMO ako prethodna godina uopšte ima evidentiran
+ * zahtev za tog zaposlenog — inače bi svima kojima app ne pokriva prošlu
+ * godinu bio dodeljen ceo fond kao „preneseno".
+ */
+export function preneseniDani(
+  zahtevi: ZahtevZaOdsustvo[],
+  podnosilac: { id: string; brojDanaGodisnjeg: number },
+  godina: number,
+): number {
+  const prethodna = godina - 1;
+  const imaEvidenciju = zahtevi.some(
+    (z) =>
+      z.zaposleniId === podnosilac.id &&
+      z.status !== "odbijeno" &&
+      Number(z.datumOd.slice(0, 4)) <= prethodna &&
+      Number(z.datumDo.slice(0, 4)) >= prethodna,
+  );
+  if (!imaEvidenciju) return 0;
+
+  const iskorisceno = iskorisceniPoTipuUGodini(
+    zahtevi,
+    podnosilac.id,
+    prethodna,
+    "godisnji",
+  );
+  return Math.max(0, podnosilac.brojDanaGodisnjeg - iskorisceno);
+}
+
+/**
+ * Koliko prenesenih dana sme da se upotrebi za termin koji se završava
+ * datuma `datumDo`. Posle 30. juna preneseni dani propadaju.
+ */
+export function prenosPrimenjiv(
+  preneseno: number,
+  godina: number,
+  datumDo: string,
+): number {
+  return datumDo <= `${godina}${PRENOS_ROK_MESEC_DAN}` ? preneseno : 0;
+}
+
 /**
  * Provera fonda za bilo koji tip koji ga ima (godišnji, bolovanje). Vraća
  * poruku greške ako termin prekoračuje fond u nekoj od dodirnutih godina,
@@ -207,9 +254,18 @@ export function proveriFondZaTip(
       tip,
       ignorirajId,
     );
-    if (iskorisceno + trazeno > fond) {
-      const preostalo = fond - iskorisceno;
-      return `Prekoračen fond (${TIP_LABELE[tip]}) za ${g}: traženo ${trazeno}, a preostalo je ${preostalo} od ${fond} dana.`;
+    // Godišnji sme da povuče i prenesene dane iz prethodne godine (do 30.06).
+    const prenos =
+      tip === "godisnji"
+        ? prenosPrimenjiv(preneseniDani(zahtevi, podnosilac, g), g, datumDo)
+        : 0;
+    const ukupno = fond + prenos;
+
+    if (iskorisceno + trazeno > ukupno) {
+      const preostalo = ukupno - iskorisceno;
+      const opisFonda =
+        prenos > 0 ? `${fond} + ${prenos} prenesenih` : String(fond);
+      return `Prekoračen fond (${TIP_LABELE[tip]}) za ${g}: traženo ${trazeno}, a preostalo je ${preostalo} od ${opisFonda} dana.`;
     }
   }
   return null;

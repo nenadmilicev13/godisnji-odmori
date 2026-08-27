@@ -2,6 +2,7 @@ export type TipOdsustva =
   | "godisnji"
   | "sick_leave"
   | "bolovanje"
+  | "rad_od_kuce"
   | "slobodan_dan"
   | "placeno_odsustvo"
   | "neplaceno_odsustvo"
@@ -68,6 +69,7 @@ export const TIPOVI_ZA_UNOS: TipOdsustva[] = [
   "godisnji",
   "sick_leave",
   "bolovanje",
+  "rad_od_kuce",
 ];
 
 export function tipoviZaUnos(admin: boolean): TipOdsustva[] {
@@ -89,6 +91,7 @@ export const TIP_LABELE: Record<TipOdsustva, string> = {
   godisnji: "Godišnji odmor",
   sick_leave: "Sick leave",
   bolovanje: "Bolovanje",
+  rad_od_kuce: "Rad od kuće 🏠",
   slobodan_dan: "Slobodan dan",
   placeno_odsustvo: "Plaćeno odsustvo",
   neplaceno_odsustvo: "Neplaćeno odsustvo",

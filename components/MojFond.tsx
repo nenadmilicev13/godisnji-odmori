@@ -1,7 +1,7 @@
 "use client";
 
 import { useStore } from "@/lib/store";
-import { brojRadnihDanaUGodini } from "@/lib/utils";
+import { brojRadnihDanaUGodini, preneseniDani } from "@/lib/utils";
 
 /**
  * Nalozi kojima se kartica ne prikazuje. Vezano za konkretan nalog, a ne za
@@ -34,7 +34,8 @@ export default function MojFond() {
     .filter((z) => z.status === "na_cekanju")
     .reduce((s, z) => s + dana(z), 0);
 
-  const fond = trenutniKorisnik.brojDanaGodisnjeg;
+  const preneseno = preneseniDani(zahtevi, trenutniKorisnik, godina);
+  const fond = trenutniKorisnik.brojDanaGodisnjeg + preneseno;
   const zauzeto = odobreno + naCekanju;
   const preostalo = Math.max(0, fond - zauzeto);
 
@@ -93,6 +94,11 @@ export default function MojFond() {
           <p className="mt-0.5 text-xs font-medium text-slate-500">
             Ukupan fond
           </p>
+          {preneseno > 0 && (
+            <p className="mt-0.5 text-[11px] text-brand-600">
+              +{preneseno} preneseno, do 30.06.
+            </p>
+          )}
         </div>
       </div>
 
